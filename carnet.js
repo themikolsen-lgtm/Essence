@@ -22,26 +22,25 @@ function showTab(log){
 }
 $("tabBtnFind").onclick = () => showTab(false);
 $("tabBtnLog").onclick = () => showTab(true);
-if(location.hash === "#carnet") showTab(true);
 
 // ---------- calculs ----------
+const ym = d => d.slice(0,7);
+const monthName = m => new Date(m+"-15").toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
 function stats(){
   const byKm = entries.filter(e=>e.km>0).sort((a,b)=>a.km-b.km || a.date.localeCompare(b.date));
   // consommation réelle : entre deux pleins complets, litres remis / km parcourus
-  const cons = {};
+  const cons = {}, series = [];
   let lastFull = null, liters = 0;
   for(const e of byKm){
-    if(lastFull){ liters += e.l; }
+    if(lastFull) liters += e.l;
     if(e.full){
       if(lastFull && e.km > lastFull.km){
         const v = liters / (e.km - lastFull.km) * 100;
-        if(v > 1 && v < 40) cons[e.id] = v;
+        if(v > 1 && v < 40){ cons[e.id] = v; series.push({date:e.date, v, km:e.km-lastFull.km}); }
       }
       lastFull = e; liters = 0;
     }
   }
-  const vals = Object.values(cons);
-  // moyenne pondérée sur toute la période couverte par des pleins complets
   const fulls = byKm.filter(e=>e.full);
   let avg = null;
   if(fulls.length >= 2){
@@ -49,65 +48,153 @@ function stats(){
     const l = byKm.filter(e=>e.km>first.km && e.km<=last.km).reduce((s,e)=>s+e.l,0);
     if(last.km > first.km) avg = l/(last.km-first.km)*100;
   }
+  if(avg==null && series.length) avg = series.reduce((a,b)=>a+b.v,0)/series.length;
   const total = entries.reduce((s,e)=>s+e.t,0), litres = entries.reduce((s,e)=>s+e.l,0);
   const kmSpan = byKm.length>=2 ? byKm[byKm.length-1].km - byKm[0].km : 0;
   const spentInSpan = byKm.length>=2 ? byKm.slice(1).reduce((s,e)=>s+e.t,0) : 0;
-  const ym = today().slice(0,7);
-  const month = entries.filter(e=>e.date.startsWith(ym)).reduce((s,e)=>s+e.t,0);
-  return {cons, avg: avg ?? (vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null), total, litres,
-          pAvg: litres ? total/litres : null, perKm: kmSpan>0 ? spentInSpan/kmSpan : null, kmSpan, month};
+  const now = new Date(), cur = today().slice(0,7);
+  const prevM = new Date(now.getFullYear(), now.getMonth()-1, 15).toISOString().slice(0,7);
+  const sumM = m => entries.filter(e=>ym(e.date)===m).reduce((s,e)=>s+e.t,0);
+  // période suivie (jours) pour les moyennes mensuelles
+  const dates = entries.map(e=>e.date).sort();
+  const days = dates.length>=2 ? Math.max(1,(new Date(dates[dates.length-1])-new Date(dates[0]))/864e5) : 0;
+  const daysKm = byKm.length>=2 ? Math.max(1,(new Date(byKm[byKm.length-1].date)-new Date(byKm[0].date))/864e5) : 0;
+  const perKm = kmSpan>0 ? spentInSpan/kmSpan : null;
+  const kmMonth = daysKm>=20 ? kmSpan/daysKm*30.4 : null;
+  const spendBase = entries.length>=2 && days>=20 ? (total - entries.find(e=>e.date===dates[0]).t)/days*365 : null;
+  return {cons, series, avg, total, litres, pAvg: litres ? total/litres : null, perKm, kmSpan, kmMonth,
+          month: sumM(cur), prevMonth: sumM(prevM), year: spendBase};
 }
 
 // ---------- affichage ----------
+const svgEmpty = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M8.5 7.5h7M8.5 11h5"/></svg>`;
+let formOpen = false;
+function setForm(open){
+  formOpen = open;
+  $("logFormCard").hidden = !open;
+  $("addFill").hidden = open;
+  if(open) setTimeout(()=>{ $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"}); }, 30);
+}
 function render(){
   const s = stats();
-  const kpi = (v,label,main) => `<div class="kpi${main?" main":""}"><b>${v}</b><span>${label}</span></div>`;
+  const carInfo = window.ESSENCE_CAR?.();
+  // --- bloc principal ---
+  if(!entries.length){
+    $("cHero").innerHTML = `<div class="empty">${svgEmpty}<h2>Votre carnet de consommation</h2>
+      <p>Notez vos pleins : l'app calcule votre consommation réelle, vos dépenses et votre coût au kilomètre.</p></div>`;
+  } else {
+    const last = s.series[s.series.length-1], prev = s.series[s.series.length-2];
+    const badges = [];
+    if(s.avg!=null && carInfo && carInfo.conso>0){
+      const d = (s.avg/carInfo.conso-1)*100;
+      badges.push(Math.abs(d)<3 ? `<span class="badge good">= conforme à la ${esc(carInfo.name)} (${fmt(carInfo.conso,1)})</span>`
+        : `<span class="badge ${d>0?"bad":"good"}">${d>0?"+":"−"}${fmt(Math.abs(d),0)} % vs ${fmt(carInfo.conso,1)} annoncés</span>`);
+    }
+    if(last && prev){
+      const d = last.v-prev.v;
+      badges.push(`<span class="badge ${d>0.05?"bad":d<-0.05?"good":""}">${d>0.05?"↗":d<-0.05?"↘":"→"} dernier plein : ${fmt(last.v,1)} L</span>`);
+    }
+    $("cHero").innerHTML = s.avg!=null
+      ? `<div class="ht">Consommation réelle</div><div class="hv"><b>${fmt(s.avg,1)}</b><span>L / 100 km</span></div>
+         <div class="badges">${badges.join("")}</div>
+         <p class="muted" style="margin:8px 2px 0">${entries.length} plein${entries.length>1?"s":""} · ${fmt(s.litres,0)} L · ${fmt(s.total)} €${s.kmSpan?` · ${s.kmSpan.toLocaleString("fr-FR")} km suivis`:""}</p>
+         <button type="button" class="ghost" id="useReal">Utiliser ${fmt(s.avg,1)} L/100 km pour trouver la station</button>`
+      : `<div class="ht">Consommation réelle</div><div class="hv"><b>–</b><span>L / 100 km</span></div>
+         <p class="muted" style="margin:8px 2px 0">Elle s'affiche après <b>deux pleins complets</b> avec le compteur kilométrique.</p>`;
+    const ub = $("useReal");
+    if(ub) ub.onclick = () => { window.ESSENCE_SET_CONSO?.(Math.round(s.avg*10)/10); toast("Consommation réelle utilisée pour trouver la station."); };
+  }
+  // --- indicateurs ---
+  $("kpiCard").hidden = !entries.length;
+  const kpi = (v,label,extra="") => `<div class="kpi"><b>${v}</b><span>${label}</span>${extra}</div>`;
+  const dm = s.prevMonth>0 ? (s.month/s.prevMonth-1)*100 : null;
   $("kpis").innerHTML =
-    kpi(s.avg!=null ? fmt(s.avg,1)+" L" : "–", "consommation réelle / 100 km", true) +
-    kpi(fmt(s.month)+" €", "dépensé ce mois-ci") +
+    kpi(fmt(s.month,0)+" €", "dépensés ce mois-ci", dm!=null && s.month>0 ? `<small class="${dm>0?"up":"down"}">${dm>0?"+":"−"}${fmt(Math.abs(dm),0)} % vs mois dernier</small>` : "") +
     kpi(s.pAvg!=null ? fmt(s.pAvg,3)+" €" : "–", "prix moyen du litre") +
-    kpi(s.perKm!=null ? fmt(s.perKm*100,2)+" €" : "–", "carburant pour 100 km");
-  $("kpiNote").textContent = !entries.length ? "Ajoutez votre premier plein ci-dessous."
-    : s.avg==null ? "La consommation réelle s'affiche après deux pleins complets avec le compteur kilométrique."
-    : `${entries.length} plein${entries.length>1?"s":""} · ${fmt(s.litres,1)} L · ${fmt(s.total)} € au total${s.kmSpan?` · ${s.kmSpan.toLocaleString("fr-FR")} km suivis`:""}`;
-  const ub = $("useReal");
-  if(s.avg!=null){ ub.style.display=""; ub.textContent = `Utiliser ${fmt(s.avg,1)} L/100 km dans les calculs`; ub.onclick = () => { window.ESSENCE_SET_CONSO?.(Math.round(s.avg*10)/10); toast("Consommation réelle utilisée pour trouver la station."); }; }
-  else ub.style.display="none";
-
-  // dépenses des 6 derniers mois
-  const months = [];
-  const d = new Date(); d.setDate(1);
-  for(let i=5;i>=0;i--){ const x = new Date(d.getFullYear(), d.getMonth()-i, 1); months.push(`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}`); }
-  const sums = months.map(m=>entries.filter(e=>e.date.startsWith(m)).reduce((a,e)=>a+e.t,0));
-  const mx = Math.max(...sums, 1);
-  $("monthsCard").hidden = !entries.length;
-  $("months").innerHTML = months.map((m,i)=>`<div class="bar"><span>${MOIS[+m.slice(5)-1]} ${m.slice(2,4)}</span><i style="width:${sums[i]/mx*100}%"></i><span>${fmt(sums[i],0)} €</span></div>`).join("");
-
-  // historique
+    kpi(s.perKm!=null ? fmt(s.perKm*100,2)+" €" : "–", "carburant / 100 km") +
+    kpi(s.kmMonth!=null ? Math.round(s.kmMonth).toLocaleString("fr-FR")+" km" : "–", "parcourus / mois") +
+    (s.year!=null ? kpi("≈ "+Math.round(s.year).toLocaleString("fr-FR")+" €", "par an à ce rythme") : "") +
+    kpi(fmt(s.total,0)+" €", "dépensés au total");
+  // --- graphique ---
+  $("chartCard").hidden = entries.length < 2;
+  drawChart(s);
+  // --- historique groupé par mois ---
   $("histCard").hidden = !entries.length;
   const list = [...entries].sort((a,b)=>b.date.localeCompare(a.date) || (b.km||0)-(a.km||0));
-  $("hist").innerHTML = list.map(e=>`<div class="entry">
-      <div><b>${new Date(e.date+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}</b>${s.cons[e.id]!=null?`<span class="cons">${fmt(s.cons[e.id],1)} L/100</span>`:""}
-        <div class="m">${fmt(e.l,2)} L × ${fmt(e.p,3)} €${e.km?` · ${(+e.km).toLocaleString("fr-FR")} km`:""}${e.full?"":" · plein partiel"}${e.st?` · ${esc(e.st)}`:""}</div></div>
+  let html = "", curM = "";
+  for(const e of list){
+    const m = ym(e.date);
+    if(m!==curM){ curM = m; const tot = entries.filter(x=>ym(x.date)===m).reduce((a,x)=>a+x.t,0);
+      html += `<div class="mhead">${monthName(m)}<span>${fmt(tot)} €</span></div>`; }
+    const c = s.cons[e.id];
+    html += `<div class="entry">
+      <div><b>${new Date(e.date+"T12:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}</b>
+        <div class="m">${fmt(e.l,2)} L × ${fmt(e.p,3)} €${e.st?` · ${esc(e.st)}`:""}</div></div>
       <div class="r">${fmt(e.t)} €</div>
+      <div class="m2">${e.km?`<span>${(+e.km).toLocaleString("fr-FR")} km</span>`:""}${c!=null?`<span class="c">${fmt(c,1)} L/100</span><span>${fmt(c*e.p,2)} €/100 km</span>`:""}${e.full?"":"<span>plein partiel</span>"}</div>
       <div class="acts"><button type="button" data-edit="${e.id}">Modifier</button><button type="button" data-del="${e.id}">Supprimer</button></div>
-    </div>`).join("");
+    </div>`;
+  }
+  $("hist").innerHTML = html;
+  if(!formOpen) setForm(!entries.length);
+  else $("addFill").hidden = true;
 }
-$("hist").addEventListener("click", ev=>{
-  const b = ev.target.closest("button"); if(!b) return;
-  if(b.dataset.del){
-    const i = entries.findIndex(e=>e.id===b.dataset.del); if(i<0) return;
-    undo = {e:entries[i], i}; markDeleted(undo.e.id, true); entries.splice(i,1); store(entries); render();
-    toast("Plein supprimé.", "Annuler", ()=>{ markDeleted(undo.e.id, false); entries.splice(undo.i,0,undo.e); store(entries); render(); });
+
+// graphique : consommation (points + moyenne), prix du litre, ou dépenses par mois (barres)
+function drawChart(s){
+  const svg = $("cSvg"); if(!svg || $("chartCard").hidden) return;
+  const W = svg.clientWidth || 340, H = svg.clientHeight || 210, m = {l:34,r:10,t:14,b:22};
+  const metric = $("cMetric").value;
+  let pts = [], bars = null, unit = "", avgLine = null, ref = null, dec = 1;
+  if(metric==="cons"){ pts = s.series.map(x=>({d:x.date, v:x.v})); unit = "L/100"; avgLine = s.avg; ref = window.ESSENCE_CAR?.()?.conso || null; }
+  else if(metric==="price"){ pts = [...entries].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({d:e.date, v:e.p})); unit = "€/L"; dec = 3; avgLine = s.pAvg; }
+  else {
+    const now = new Date(); bars = [];
+    for(let i=11;i>=0;i--){ const d = new Date(now.getFullYear(), now.getMonth()-i, 15); const k = d.toISOString().slice(0,7);
+      bars.push({k, lab:MOIS[d.getMonth()].replace(".",""), v: entries.filter(e=>ym(e.date)===k).reduce((a,e)=>a+e.t,0)}); }
+    unit = "€"; dec = 0;
   }
-  if(b.dataset.edit){
-    const e = entries.find(x=>x.id===b.dataset.edit); if(!e) return;
-    editing = e.id;
-    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
-    $("logFormTitle").textContent="Modifier le plein"; $("lSave").textContent="Enregistrer les modifications"; $("lCancel").hidden=false;
-    $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"});
+  const vals = bars ? bars.map(b=>b.v) : pts.map(p=>p.v).concat(avgLine??[], ref??[]);
+  if(!vals.length || (!bars && !pts.length)){
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">${metric==="cons"?"Il faut au moins deux pleins complets avec le compteur.":"Pas encore assez de données."}</text>`;
+    $("cLegend").textContent = ""; return;
   }
-});
+  let lo = bars ? 0 : Math.min(...vals), hi = Math.max(...vals);
+  if(hi===lo){ hi += metric==="price"?0.05:1; lo = bars?0:lo-(metric==="price"?0.05:1); }
+  const pad = (hi-lo)*0.15; if(!bars){ lo -= pad; } hi += pad;
+  const X0 = m.l, X1 = W-m.r, Y0 = H-m.b, Y1 = m.t;
+  const y = v => Y0 - (v-lo)/(hi-lo)*(Y0-Y1);
+  let g = "";
+  for(let i=0;i<=3;i++){ const v = lo+(hi-lo)*i/3, yy = y(v);
+    g += `<line x1="${X0}" x2="${X1}" y1="${yy}" y2="${yy}" stroke="var(--field)" stroke-width="1"/><text x="${X0-6}" y="${yy+4}" text-anchor="end">${fmt(v, metric==="price"?2:(bars?0:1))}</text>`; }
+  if(bars){
+    const bw = (X1-X0)/bars.length;
+    bars.forEach((b,i)=>{ const x = X0+i*bw+bw*0.18, w = bw*0.64, yy = y(b.v);
+      g += `<rect x="${x}" y="${yy}" width="${w}" height="${Math.max(0,Y0-yy)}" rx="${Math.min(6,w/2)}" fill="var(--accent)" opacity="${b.k===today().slice(0,7)?1:.75}"/>`;
+      if(W>=360 || i%2===0) g += `<text x="${x+w/2}" y="${H-6}" text-anchor="middle">${b.lab}</text>`;
+      if(b.v>0 && W>=360) g += `<text class="val" x="${x+w/2}" y="${yy-4}" text-anchor="middle">${fmt(b.v,0)}</text>`; });
+    const tot = bars.reduce((a,b)=>a+b.v,0);
+    $("cLegend").textContent = `12 derniers mois : ${fmt(tot,0)} € · moyenne ${fmt(tot/12,0)} € / mois`;
+  } else {
+    const n = pts.length, x = i => n===1 ? (X0+X1)/2 : X0 + i/(n-1)*(X1-X0);
+    if(ref) g += `<line x1="${X0}" x2="${X1}" y1="${y(ref)}" y2="${y(ref)}" stroke="var(--muted)" stroke-dasharray="2 4" stroke-width="1.5"/><text x="${X1}" y="${y(ref)-5}" text-anchor="end">annoncé ${fmt(ref,1)}</text>`;
+    if(avgLine!=null) g += `<line x1="${X0}" x2="${X1}" y1="${y(avgLine)}" y2="${y(avgLine)}" stroke="var(--green)" stroke-dasharray="6 5" stroke-width="2"/>`;
+    g += `<path d="${pts.map((p,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(p.v).toFixed(1)).join("")}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+    pts.forEach((p,i)=>{ g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="4.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="2.5"/>`; });
+    const step = Math.max(1, Math.ceil(n/(W<360?4:6)));
+    pts.forEach((p,i)=>{ if(i%step===0 || i===n-1) g += `<text x="${x(i)}" y="${H-6}" text-anchor="${n===1?"middle":i===0?"start":i===n-1?"end":"middle"}">${new Date(p.d+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}).replace(".","")}</text>`; });
+    const lastP = pts[n-1];
+    g += `<text class="val" x="${Math.min(x(n-1),X1)}" y="${y(lastP.v)-10}" text-anchor="${n===1?"middle":"end"}">${fmt(lastP.v,dec)}</text>`;
+    $("cLegend").textContent = metric==="cons"
+      ? `Orange : chaque plein complet · vert pointillé : votre moyenne (${fmt(avgLine,1)} L/100)${ref?" · gris : consommation annoncée":""}`
+      : `Prix payé à chaque plein · vert pointillé : prix moyen (${fmt(avgLine,3)} €/L)`;
+  }
+  svg.innerHTML = g;
+}
+$("cMetric").addEventListener("change", ()=>drawChart(stats()));
+new ResizeObserver(()=>{ if(!$("tabLog").hidden) drawChart(stats()); }).observe($("cFig"));
+$("addFill").onclick = () => { resetForm(); setForm(true); try{ $("lKm").focus({preventScroll:true}); }catch(e){} };
+$("closeForm").onclick = () => { resetForm(); setForm(false); };
 
 // ---------- formulaire ----------
 const num = id => { const v = parseFloat(String($(id).value).replace(",",".")); return isFinite(v) ? v : null; };
@@ -120,7 +207,7 @@ function resetForm(){
   editing=null; $("logForm").reset(); $("lDate").value=today(); $("lFull").checked=true;
   $("logFormTitle").textContent="Ajouter un plein"; $("lSave").textContent="Enregistrer le plein"; $("lCancel").hidden=true;
 }
-$("lCancel").onclick = resetForm;
+$("lCancel").onclick = () => { resetForm(); setForm(!entries.length); };
 $("logForm").addEventListener("submit", ev=>{
   ev.preventDefault();
   const l=num("lL"); let p=num("lP"), t=num("lT");
@@ -137,7 +224,7 @@ $("logForm").addEventListener("submit", ev=>{
   if(e.km && prev && e.km < prev.km) toast("Attention : compteur plus petit qu'au plein précédent.");
   else toast(editing ? "Plein modifié ✓" : "Plein enregistré ✓");
   if(editing){ const i=entries.findIndex(x=>x.id===editing); entries[i]=e; } else entries.push(e);
-  store(entries); resetForm(); render();
+  store(entries); resetForm(); setForm(false); render();
 });
 
 // ---------- choisir une station proche : nom + prix du jour ----------
@@ -166,7 +253,7 @@ $("stPickBtn").onclick = async () => {
 // ---------- depuis l'onglet « Trouver » ----------
 window.CARNET = {
   prefill(x){
-    showTab(true); resetForm();
+    showTab(true); resetForm(); setForm(true);
     if(x){ if(x.liters) $("lL").value=x.liters; if(x.price){ $("lP").value=x.price; lastTyped="lP"; if(x.liters) $("lT").value=(x.liters*x.price).toFixed(2); } if(x.station) $("lSt").value=x.station; }
     const lastKm = Math.max(0,...entries.map(e=>e.km||0));
     $("lKm").placeholder = lastKm ? `dernier : ${lastKm.toLocaleString("fr-FR")}` : "ex. 84 250";
@@ -217,4 +304,5 @@ function toast(msg, action, fn){
 window.addEventListener("essence-synced", ()=>{ entries = load(); render(); });
 resetForm();
 render();
+if(location.hash === "#carnet") showTab(true);
 }

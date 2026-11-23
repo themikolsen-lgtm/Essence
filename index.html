@@ -250,12 +250,102 @@ header .htxt{flex:1}
 .stpick button small{grid-column:1;color:var(--muted);font-weight:500;font-size:12px}
 .stpick button b{grid-row:1/3;grid-column:2;align-self:center;color:var(--accent);font-size:16px}
 .stpick p{margin:4px 8px;font-size:14px}
+
+/* ===== Graphisme v2 : icônes, en-tête, résultat, pastilles d'enseigne ===== */
+.i{width:22px;height:22px;flex:none;display:block}
+header{display:block;padding:12px 14px 14px;padding-top:max(12px,env(safe-area-inset-top));border-radius:0 0 30px 30px;position:relative;overflow:hidden;
+  background:var(--accent)}
+header::before{content:"";position:absolute;right:-60px;top:-80px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none}
+header::after{content:"";position:absolute;left:-40px;bottom:-110px;width:200px;height:200px;border-radius:50%;background:rgba(0,0,0,.06);pointer-events:none}
+.hrow{display:flex;align-items:center;gap:12px;max-width:640px;margin:0 auto;position:relative;z-index:1}
+header .logo{width:46px;height:46px;border-radius:16px;background:#fff;color:var(--accent);display:grid;place-items:center}
+header .logo .i{width:26px;height:26px}
+header h1{font-size:21px;letter-spacing:-.01em}
+.acct{display:grid;place-items:center;color:var(--accent)}
+.acct .i{width:22px;height:22px}
+.tabs{position:relative;z-index:1;max-width:640px;width:100%;margin:12px auto 0;background:rgba(0,0,0,.16);padding:4px}
+.tabs button{display:flex;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.88)}
+.tabs button .i{width:19px;height:19px}
+.tabs button[aria-selected=true]{background:#fff;color:var(--accent)}
+main{padding-top:14px}
+.sum .ic{color:#fff}
+.sum .ic .i{width:24px;height:24px}
+#geo{display:grid;place-items:center;background:var(--accent);color:#fff}
+.pickbtn{display:flex;align-items:center;gap:12px;text-align:left}
+.pickbtn .i{color:var(--accent)}
+.pickbtn small{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.where{display:flex;align-items:center;gap:6px}
+.where .i{width:15px;height:15px;color:var(--accent)}
+/* Résultat principal */
+.best{padding:18px;animation:rise .35s ease both}
+.best .kicker{font-size:13px;font-weight:700;opacity:.9;margin-bottom:4px}
+.best .who{display:flex;align-items:center;gap:12px}
+.best .who .big{font-size:clamp(22px,6.5vw,30px)}
+.best .addr{font-size:14px;opacity:.9;margin-top:2px}
+.best .price{font-size:clamp(34px,10vw,46px);font-weight:800;line-height:1;margin:14px 0 2px;letter-spacing:-.02em}
+.best .price small{font-size:15px;font-weight:700;opacity:.9;letter-spacing:0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 12px}
+.stat{background:rgba(255,255,255,.16);border-radius:18px;padding:9px 10px}
+.stat b{display:block;font-size:16px;font-weight:800;white-space:nowrap}
+.stat span{display:block;font-size:11px;font-weight:600;opacity:.85}
+.save{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--green);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:800;margin-bottom:6px}
+.best .note{font-size:13px;opacity:.9;margin:0 0 12px}
+.best a,.logit{display:inline-flex;align-items:center;gap:8px}
+.best a .i,.logit .i{width:18px;height:18px}
+/* Pastille d'enseigne */
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;flex:none;letter-spacing:-.02em}
+.best .av{width:52px;height:52px;font-size:18px;box-shadow:0 0 0 3px rgba(255,255,255,.55)}
+.stack tr{grid-template-columns:44px 1fr auto!important;animation:rise .3s ease both}
+.stack td[data-l="Rang"]{width:44px!important;height:44px!important;border-radius:50%!important;padding:0!important;background:transparent!important;position:relative}
+.stack td[data-l="Rang"] .av{width:44px;height:44px}
+.stack td[data-l="Rang"] .rk{position:absolute;right:-4px;bottom:-4px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;display:grid;place-items:center;font-weight:800;border:2px solid var(--card)}
+.stack tr.top td[data-l="Rang"] .rk{background:var(--green);color:#fff}
+.stack td[data-l="Coût total"]{font-size:17px!important}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{animation:rise .25s ease both}
+
+/* ===== Carnet v2 ===== */
+.hero{padding:16px}
+.hero .ht{font-size:13px;font-weight:700;color:var(--muted);margin:0 2px}
+.hero .hv{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:2px 2px 0}
+.hero .hv b{font-size:clamp(38px,11vw,52px);font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--accent)}
+.hero .hv span{font-size:16px;font-weight:700;color:var(--muted)}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;background:var(--field)}
+.badge.good{background:light-dark(#dcf5e6,#123222);color:var(--green)}
+.badge.bad{background:light-dark(#fde4e4,#3a1517);color:var(--red)}
+.hero .ghost{margin-top:12px}
+.empty{text-align:center;padding:8px 6px 4px}
+.empty svg{width:64px;height:64px;color:var(--accent);margin:0 auto 8px;display:block}
+.empty h2{font-size:19px;margin:0 0 6px}
+.empty p{margin:0 0 4px;color:var(--muted);font-size:14px}
+.chead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chead .ch2{margin-bottom:8px}
+.xbtn{width:38px;height:38px;min-height:38px;padding:0;background:var(--field);flex:none}
+.cfig{position:relative;height:210px;margin-top:10px}
+.cfig svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.cfig text{font:600 11px "Plus Jakarta Sans",system-ui,sans-serif;fill:var(--muted)}
+.cfig .val{fill:var(--ink);font-weight:800}
+.kpis{grid-template-columns:1fr 1fr}
+.kpi small{display:block;font-size:12px;font-weight:700;margin-top:2px}
+.kpi small.up{color:var(--red)} .kpi small.down{color:var(--green)}
+.addfill{min-height:56px;font-size:17px}
+.mhead{display:flex;justify-content:space-between;align-items:baseline;margin:14px 4px 2px;font-weight:800;font-size:14px;text-transform:capitalize}
+.mhead:first-child{margin-top:2px}
+.mhead span{color:var(--muted);font-weight:700}
+.entry .m2{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.entry .m2 span{font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--field)}
+.entry .m2 .c{background:var(--green);color:#fff}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header><span class="logo">⛽</span><div class="htxt"><h1>Où faire le plein ?</h1><p>Le moins cher, trajet compris</p></div><button type="button" id="acctBtn" class="acct" hidden aria-label="Mon compte">👤</button></header>
+<header><div class="hrow"><span class="logo"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg></span><div class="htxt"><h1>Où faire le plein ?</h1><p>Le moins cher, trajet compris</p></div><button type="button" id="acctBtn" class="acct" hidden aria-label="Mon compte"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div>
+<nav class="tabs" role="tablist">
+  <button type="button" role="tab" id="tabBtnFind" aria-selected="true" aria-controls="tabFind"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg><span>Trouver</span></button>
+  <button type="button" role="tab" id="tabBtnLog" aria-selected="false" aria-controls="tabLog"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/><path d="M8.5 7.5h7M8.5 11h5"/></svg><span>Carnet</span></button>
+</nav></header>
 <dialog id="acct" class="sheet" aria-labelledby="acctTitle">
   <form method="dialog" class="sheetx"><button aria-label="Fermer">✕</button></form>
   <div id="acctOut">
@@ -278,14 +368,11 @@ header .htxt{flex:1}
   </div>
   <p class="err" id="acctErr" role="alert"></p>
 </dialog>
-<nav class="tabs" role="tablist">
-  <button type="button" role="tab" id="tabBtnFind" aria-selected="true" aria-controls="tabFind">⛽ Trouver</button>
-  <button type="button" role="tab" id="tabBtnLog" aria-selected="false" aria-controls="tabLog">📒 Carnet</button>
-</nav>
+
 <main id="tabFind" role="tabpanel">
   <section class="card closed" id="carBox">
     <div class="sum">
-      <span class="ic">🚗</span>
+      <span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17H4a1 1 0 0 1-1-1v-3.5l2.2-5.3A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1.2L21 12.5V16a1 1 0 0 1-1 1h-1"/><path d="M3.5 12.5h17"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/></svg></span>
       <div class="sumtxt"><b id="sumName">Votre voiture</b><span class="muted" id="sumInfo"></span></div>
       <button type="button" class="ghost" id="carEditBtn">Modifier</button>
     </div>
@@ -332,7 +419,7 @@ header .htxt{flex:1}
     <div id="addrCard" hidden>
       <div class="addrrow">
         <input id="addr" list="addrList" placeholder="Adresse ou ville" autocomplete="off" enterkeyhint="search" aria-label="Adresse"><datalist id="addrList"></datalist>
-        <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle">📍</button>
+        <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="8"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>
       </div>
       <p id="addrNote" class="addrnote" role="alert"></p>
       <div class="chips">
@@ -360,19 +447,25 @@ header .htxt{flex:1}
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
   <p class="muted saved">✓ Vos réglages (voiture, quantité, rayon, adresse) sont enregistrés sur cet appareil, rien que pour vous. <button type="button" id="forget" class="linkish">Effacer mes réglages</button></p>
-  <p class="muted" style="text-align:center">Version 20261123u</p>
+  <p class="muted" style="text-align:center">Version 20261123w</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
-  <section class="card">
-    <h2 class="ch2">Cahier de suivi de consommation</h2>
-    <div class="kpis" id="kpis"></div>
-    <p class="muted" id="kpiNote" style="margin:8px 4px 0"></p>
-    <button type="button" class="ghost" id="useReal" style="margin-top:10px;display:none"></button>
+  <section class="card hero" id="cHero"></section>
+
+  <section class="card" id="chartCard" hidden>
+    <div class="chead"><h2 class="ch2">Évolution</h2></div>
+    <select id="cMetric" data-pills aria-label="Graphique"><option value="cons" selected>Conso</option><option value="price">Prix / L</option><option value="spend">Dépenses</option></select>
+    <div class="cfig" id="cFig"><svg id="cSvg" role="img" aria-label="Graphique"></svg></div>
+    <p class="muted" id="cLegend" style="margin:6px 6px 0"></p>
   </section>
 
+  <section class="card" id="kpiCard" hidden><div class="kpis" id="kpis"></div></section>
+
+  <button type="button" class="primary addfill" id="addFill" hidden>+ Ajouter un plein</button>
+
   <section class="card" id="logFormCard">
-    <h2 class="ch2" id="logFormTitle">Ajouter un plein</h2>
+    <div class="chead"><h2 class="ch2" id="logFormTitle">Ajouter un plein</h2><button type="button" class="xbtn" id="closeForm" aria-label="Fermer">✕</button></div>
     <form id="logForm" autocomplete="off">
       <div class="row r2">
         <div><label class="lbl" for="lDate">Date</label><input id="lDate" type="date" required></div>
@@ -383,7 +476,7 @@ header .htxt{flex:1}
         <div><label class="lbl" for="lP">Prix / L</label><input id="lP" type="number" inputmode="decimal" min="0" step="0.001" placeholder="1,749"></div>
         <div><label class="lbl" for="lT">Total €</label><input id="lT" type="number" inputmode="decimal" min="0" step="0.01" placeholder="72,06"></div>
       </div>
-      <button type="button" id="stPickBtn" class="pickbtn">⛽ Choisir une station proche (remplit le prix du jour)</button>
+      <button type="button" id="stPickBtn" class="pickbtn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg><span>Choisir une station proche<small>remplit le prix du jour</small></span></button>
       <div id="stPick" class="stpick" hidden></div>
       <div class="row r2">
         <div><label class="lbl" for="lSt">Station (facultatif)</label><input id="lSt" type="text" placeholder="ex. E.Leclerc Arnas"></div>
@@ -397,17 +490,12 @@ header .htxt{flex:1}
     </form>
   </section>
 
-  <section class="card" id="monthsCard" hidden>
-    <h2 class="ch2">Dépenses par mois</h2>
-    <div id="months" class="bars"></div>
-  </section>
-
   <section class="card" id="histCard" hidden>
     <h2 class="ch2">Historique</h2>
     <div id="hist"></div>
     <div class="row r2" style="margin-top:12px">
-      <button type="button" id="lExport">⬇️ Exporter (CSV)</button>
-      <label class="filebtn">⬆️ Importer<input type="file" id="lImport" accept=".csv,text/csv"></label>
+      <button type="button" id="lExport">Exporter (CSV)</button>
+      <label class="filebtn">Importer un CSV<input type="file" id="lImport" accept=".csv,text/csv"></label>
     </div>
   </section>
   <p class="muted saved">✓ Votre carnet est enregistré sur cet appareil. Exportez-le de temps en temps pour le garder en sécurité.</p>
@@ -415,10 +503,10 @@ header .htxt{flex:1}
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123u"></script>
-<script src="app.js?v=20261123u"></script>
-<script src="carnet.js?v=20261123u"></script>
-<script src="firebase-config.js?v=20261123u"></script>
-<script type="module" src="compte.js?v=20261123u"></script>
+<script src="cars.js?v=20261123w"></script>
+<script src="app.js?v=20261123w"></script>
+<script src="carnet.js?v=20261123w"></script>
+<script src="firebase-config.js?v=20261123w"></script>
+<script type="module" src="compte.js?v=20261123w"></script>
 </body>
 </html>

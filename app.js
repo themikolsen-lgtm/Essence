@@ -22,6 +22,20 @@ function pillify(sel){
 }
 document.querySelectorAll("select[data-pills]").forEach(pillify);
 
+const ICON = {pump:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg>`,bolt:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`,car:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17H4a1 1 0 0 1-1-1v-3.5l2.2-5.3A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1.2L21 12.5V16a1 1 0 0 1-1 1h-1"/><path d="M3.5 12.5h17"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/></svg>`,pin:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>`,nav:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8z"/></svg>`,plus:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`,coffee:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2.5v2.5M12 2.5v2.5"/></svg>`};
+// pastille d'enseigne : couleur de la marque (approchée) + initiales
+const BRAND_COL = [[/total/i,"#e2231a"],[/leclerc/i,"#0062ae"],[/intermarch/i,"#e30613"],[/carrefour/i,"#1e4b9b"],[/auchan/i,"#d6001c"],
+  [/(syst[eè]me|super|hyper) u\b|^u\b|u express/i,"#e3000f"],[/esso/i,"#c8102e"],[/\bbp\b/i,"#009a3d"],[/shell/i,"#e5b300"],[/avia/i,"#d71920"],
+  [/agip|eni/i,"#f2b600"],[/casino/i,"#00843d"],[/netto/i,"#e3a300"],[/dyneff/i,"#f37021"],[/elf/i,"#0055a4"],[/lidl/i,"#0050aa"],
+  [/ionity/i,"#1a1a1a"],[/tesla/i,"#cc0000"],[/izivia/i,"#00a3e0"],[/fastned/i,"#f0c400"],[/electra/i,"#1c1c4c"]];
+function avatar(name){
+  const n = String(name||"").replace(/^station\s+/i,"").trim() || "?";
+  const hit = BRAND_COL.find(([re])=>re.test(n));
+  let col = hit ? hit[1] : `hsl(${[...n].reduce((h,c)=>h*31+c.charCodeAt(0)>>>0,7)%360} 55% 42%)`;
+  const words = n.replace(/[^\p{L}\p{N} ]/gu," ").split(/\s+/).filter(Boolean);
+  const ini = (words.length>1 ? words[0][0]+words[1][0] : n.slice(0,2)).toUpperCase();
+  return `<span class="av" style="background:${col}">${esc(ini)}</span>`;
+}
 const FUELS = {gazole:"Gazole",e10:"SP95-E10",sp95:"SP95",sp98:"SP98",e85:"E85 (bioéthanol)",gplc:"GPL",elec:"Électrique"};
 const FUEL_NAME = {e:"Essence",d:"Diesel",h:"Hybride essence",g:"GPL / essence",x:"Électrique"};
 const FUEL_KEYS = {e:["e10","sp95","sp98","e85"],h:["e10","sp95","sp98"],d:["gazole"],g:["gplc","e10","sp95","sp98"],x:["elec"]};
@@ -108,6 +122,7 @@ window.ESSENCE_NEARBY = async () => {
   st.sort((a,b)=>a.km-b.km);
   return {fuel:FUELS[fuel], list: st.slice(0,15).map(s=>({name:sName(s), ville:s.ville||"", adresse:s.adresse||"", price:s.price, km:s.km, maj:s.maj}))};
 };
+window.ESSENCE_CAR = () => car ? {name:`${car.brand} ${car.model}`, conso:car.conso, fuel:car.fuel} : null;
 window.ESSENCE_SET_CONSO = v => { $("conso").value = v; updSummary(); save(); };
 const AVG = {gazole:5.5,e10:6.5,sp95:6.5,sp98:6.8,e85:8.0,gplc:8.0,elec:17};
 function noCarDefaults(){
@@ -140,8 +155,8 @@ function updSummary(){
   $("conso").max = ev ? 40 : 30;
   if(!$("go").classList.contains("busy")) $("golbl").textContent = goLabel();
   document.querySelector("header h1").textContent = ev ? "Où recharger ?" : "Où faire le plein ?";
-  document.querySelector("header .logo").textContent = ev ? "⚡" : "⛽";
-  document.querySelector("#carBox .sum .ic").textContent = car ? "🚗" : (ev ? "⚡" : "⛽");
+  document.querySelector("header .logo").innerHTML = ev ? ICON.bolt : ICON.pump;
+  document.querySelector("#carBox .sum .ic").innerHTML = car ? ICON.car : (ev ? ICON.bolt : ICON.pump);
   document.querySelector("header p").textContent = ev ? "Charge rapide et pas chère, et quoi faire à côté" : "Le moins cher, trajet compris";
 }
 function setCarOpen(open){
@@ -286,7 +301,7 @@ function setDetails(open){
 }
 $("more").addEventListener("click", ()=>setDetails($("addrCard").hidden));
 $("where").addEventListener("click", ()=>setDetails(true));
-function showWhere(){ $("where").textContent = origin ? "📍 "+origin.label : ""; }
+function showWhere(){ $("where").innerHTML = origin ? ICON.pin+`<span>${esc(origin.label)}</span>` : ""; }
 function askAddress(kind){
   setDetails(true);
   setStatus("");
@@ -336,7 +351,7 @@ async function locate(auto){
 }
 $("geo").addEventListener("click", ()=>locate(false));
 // localisation automatique à l'ouverture
-if(!$("addr").value.trim()) locate(true); else $("where").textContent = "📍 "+$("addr").value;
+if(!$("addr").value.trim()) locate(true); else $("where").innerHTML = ICON.pin+`<span>${esc($("addr").value)}</span>`;
 // si l'utilisateur modifie le champ, on oublie la position GPS
 $("addr").addEventListener("focus", ()=>{ if($("addr").value.startsWith("📍")){ $("addr").value=""; origin=null; } });
 $("go").addEventListener("click", search);
@@ -478,15 +493,19 @@ function render(st, o){
   const best = st[0], nearest = st.reduce((a,b)=>a.km<b.km?a:b), worst = st[st.length-1];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   $("best").style.display="block";
+  const saving = nearest.total-best.total;
   $("best").innerHTML = `
-    <div>Le plus rentable${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
-    <div class="big">${esc(sName(best))}</div>
-    <div>${esc(best.adresse)}, ${esc(best.cp)} ${esc(best.ville)}</div>
-    <div class="big" style="margin-top:6px">${fmt(best.total)} € <span style="font-size:.5em">pour ${o.liters} L</span></div>
-    <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €${best.tollCost>0?` + péage ~${fmt(best.tollCost)} €`:""}</div>
-    <div style="margin:10px 0 14px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(nearest.total-best.total)} €</b> par rapport à la plus proche (${esc(sName(nearest))}, ${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
-    Jusqu'à <b>${fmt(worst.total-best.total)} €</b> d'écart avec la pire option.</div>
-    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire  ›</a><button type="button" class="logit" id="logBest">📒 Noter ce plein</button></div>`;
+    <div class="kicker">Le plus rentable${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
+    <div class="who">${avatar(best.brand||sName(best))}<div><div class="big">${esc(sName(best))}</div><div class="addr">${esc(best.adresse)}, ${esc(best.cp)} ${esc(best.ville)}</div></div></div>
+    <div class="price">${fmt(best.total)} € <small>pour ${o.liters} L, trajet compris</small></div>
+    <div class="stats">
+      <div class="stat"><b>${fmt(best.price,3)} €</b><span>${esc(FUELS[o.fuel])} / L</span></div>
+      <div class="stat"><b>${fmt(best.km,1)} km</b><span>~${Math.round(best.min)} min${best.road?"":" (estimé)"}</span></div>
+      <div class="stat"><b>${fmt(best.tripCost+best.tollCost)} €</b><span>trajet${o.rt?" A/R":""}${best.tollCost>0?" + péage":""}</span></div>
+    </div>
+    ${best===nearest ? `<div class="save">✓ C'est aussi la plus proche</div>` : `<div class="save">− ${fmt(saving)} € vs la plus proche</div>`}
+    <p class="note">${best===nearest?"":`La plus proche : ${esc(sName(nearest))}, ${esc(nearest.ville)} à ${fmt(nearest.price,3)} €/L. `}Jusqu'à ${fmt(worst.total-best.total)} € d'écart avec la pire option.</p>
+    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" id="logBest">${ICON.plus}Noter ce plein</button></div>`;
   window.ESSENCE_LAST = {station:`${sName(best)}, ${best.ville||""}`, price:best.price, liters:o.liters, fuel:FUELS[o.fuel]};
   $("logBest").onclick = () => window.CARNET?.prefill(window.ESSENCE_LAST);
   $("resultsPanel").style.display="block";
@@ -494,8 +513,8 @@ function render(st, o){
   $("evSort").nextElementSibling.style.display = "none";
   $("resNote").textContent = "Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).";
   $("rows").onclick = null;
-  $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
-    <td data-l="Rang">${i+1}</td>
+  $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}" style="animation-delay:${Math.min(i,10)*30}ms">
+    <td data-l="Rang">${avatar(s.brand||sName(s))}<span class="rk">${i+1}</span></td>
     <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><br>${esc(s.adresse)}<br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · prix du "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span>
       <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div></td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
@@ -627,22 +646,21 @@ function renderEV(st, ctx, rt){
   const costTxt = s => s.g ? "Gratuit" : s.cost!=null ? `≈ ${fmt(s.cost)} € (${fmt(s.pk,2)} €/kWh)` : "Prix non communiqué";
   $("best").style.display="block";
   $("best").innerHTML = `
-    <div>${{cost:"La moins chère",best:"Le meilleur rapport durée / prix",time:"La plus rapide"}[$("evSort").value]}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
-    <div class="big">⚡ ${esc(evName(best))}</div>
-    <div>${esc(evPlace(best))}${esc(best.a)}</div>
+    <div class="kicker">${{cost:"La moins chère",best:"Le meilleur rapport durée / prix",time:"La plus rapide"}[$("evSort").value]}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
+    <div class="who">${avatar(evName(best))}<div><div class="big">${esc(evName(best))}</div><div class="addr">${esc(evPlace(best))}${esc(best.a)}</div></div></div>
     <div class="big" style="margin-top:6px">${fmtMin(best.ch.min)} <span style="font-size:.5em">de charge (${ctx.now} → ${ctx.tgt} %)</span></div>
     <div>${fmt(best.ch.power,0)} kW ${best.ch.fast?"charge rapide":"prise normale"} · ${fmt(best.km,1)} km · ~${Math.round(best.min)} min de route${best.tollCost>0?` · péage ~${fmt(best.tollCost)} €`:""}</div>
     <div>${costTxt(best)}${best.h?` · ${esc(best.h)}`:""}</div>
     <div style="margin:10px 0 6px"><b>☕ Pendant la charge, à côté :</b></div>
     <div class="near" id="bestNear"><span class="muted" style="color:inherit;opacity:.85">Recherche…</span></div>
-    <p style="margin:12px 0 0"><a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire ›</a></p>`;
+    <div class="bestbtns" style="margin-top:12px"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div>`;
   $("resultsPanel").style.display="block";
   $("resTitle").textContent = "Toutes les bornes";
   $("evSort").nextElementSibling.style.display = "";
   $("resNote").textContent = "Temps de charge estimé selon la puissance de la borne et de votre voiture (ralentissement au-delà de 80 %), en comptant l'énergie dépensée pour y aller. Prix : tel que déclaré par l'opérateur, quand il est lisible. Bornes : base nationale IRVE (data.gouv.fr) · à côté : OpenStreetMap.";
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
-    <td data-l="Rang">${i+1}</td>
-    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>⚡ ${esc(evName(s))}</b></a><br>${esc(evPlace(s))}${esc(s.a)}
+    <td data-l="Rang">${avatar(evName(s))}<span class="rk">${i+1}</span></td>
+    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(evName(s))}</b></a><br>${esc(evPlace(s))}${esc(s.a)}
       <div class="meta"><span>${fmt(s.p,0)} kW</span><span>${esc(plugs(s))}</span><span>${fmt(s.km,1)} km</span><span>${s.q} point${s.q>1?"s":""} de charge</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}<span>${esc(costTxt(s))}</span></div>
       <button type="button" class="nearbtn" data-i="${i}">☕ Que faire à côté ?</button><div class="near"></div></td>
     <td class="n" data-l="Coût total"><b>${fmtMin(s.ch.min)}</b></td>
