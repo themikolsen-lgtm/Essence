@@ -139,7 +139,7 @@ $("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary
 const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
 function updSummary(){
-  const pl = (typeof activeVeh==="function" && garage.list.length===1) ? activeVeh()?.plate : "";
+  const pl = "";
   $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""}` : `${FUELS[$("fuel").value]||"Carburant"} · sans modèle précis`);
   const engTxt = car ? car.eng+" · " : "";
   const c = +$("conso").value;
@@ -264,7 +264,7 @@ function renderGarage(){
   $("vehDel").hidden = !many;
   $("garage").innerHTML = many ? garage.list.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
-      const label = x.plate ? plateHTML(x.plate) : esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel]||"Véhicule"));
+      const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
       return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}">${label}</button>`;
     }).join("") + (editing ? "" : `<button type="button" class="add" data-add="1" aria-label="Ajouter un véhicule">+</button>`) : "";
   updSummary();
@@ -284,7 +284,7 @@ function addVehicle(){
   garage.list.push(v); garage.active = v.id; writeGarage();
   applySnap(v.snap); car = null; $("carq").value = "";
   setCarOpen(true); renderGarage();
-  setTimeout(()=>{ try{ $("plate").focus(); }catch(e){} }, 60);
+  setTimeout(()=>{ try{ $("carq").focus(); }catch(e){} }, 60);
   window.dispatchEvent(new Event("essence-vehicle"));
 }
 let delArmed = false;
@@ -417,17 +417,19 @@ function setDetails(open){
   $("more").setAttribute("aria-expanded", open?"true":"false");
 }
 $("more").addEventListener("click", ()=>setDetails($("addrCard").hidden));
-$("where").addEventListener("click", ()=>setDetails(true));
+$("where").addEventListener("click", ()=>{ setDetails(true); setTimeout(()=>{ try{ $("addr").focus(); }catch(e){} }, 50); });
 function showWhere(){ $("where").innerHTML = origin ? ICON.pin+`<span>${esc(origin.label)}</span>` : ""; }
-function askAddress(kind){
-  setDetails(true);
+function askAddress(kind, open){
+  if(open) setDetails(true);
   setStatus("");
+  // page d'accueil : un simple message sous le rayon, les détails restent repliés
+  if(!open) $("where").innerHTML = `<span class="warn">${ICON.pin}${kind==="denied"?"Localisation bloquée":"Position introuvable"}</span><button type="button" class="linkish">Saisir une adresse</button>`;
   $("addrCard").classList.add("need");
   $("addr").placeholder = "Tapez votre adresse";
   $("addrNote").textContent = kind==="denied"
     ? "📍 Localisation bloquée sur ce téléphone. Tapez votre adresse ou une ville ci-dessus, puis « Trouver »."
     : "📍 Position introuvable. Tapez votre adresse ou une ville ci-dessus, puis « Trouver ».";
-  try{ $("addrCard").scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){}
+  if(open) try{ $("addrCard").scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){}
 }
 function clearAsk(){ $("addrCard").classList.remove("need"); $("addrNote").textContent=""; $("addr").placeholder="Adresse ou ville"; }
 $("addr").addEventListener("input", clearAsk);
@@ -435,8 +437,8 @@ $("addr").addEventListener("change", save);
 async function locate(auto){
   $("geohelp").classList.remove("on");
   // en automatique : pas de gros message d'aide, juste une indication
-  const fail = kind => { progress(null); askAddress(kind); if(!auto) geoHelp(kind); };
-  if(!window.isSecureContext) return auto ? askAddress("unavailable") : geoHelp("insecure");
+  const fail = kind => { progress(null); askAddress(kind, !auto); if(!auto) geoHelp(kind); };
+  if(!window.isSecureContext) return auto ? askAddress("unavailable", false) : geoHelp("insecure");
   if(!navigator.geolocation) return fail("unavailable");
   if(auto && navigator.permissions?.query){
     try{ const st = await navigator.permissions.query({name:"geolocation"}); if(st.state==="denied") return fail("denied"); }catch(e){}

@@ -413,6 +413,25 @@ main{gap:14px}
 #status{text-align:center;font-size:13px}
 #carEdit{margin-top:14px}
 #carBox.closed .garage{margin-top:12px}
+
+/* Pilules : tout est visible, sans défilement horizontal */
+.pills{flex-wrap:wrap;overflow:visible;scroll-snap-type:none;margin:0}
+.pills button{flex:1 1 auto;min-width:52px;padding:0 12px}
+#radius+.pills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+
+.where .warn{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:700}
+.where .linkish{margin-left:8px;font-size:13px;color:var(--ink)}
+.where{white-space:normal}
+.pills button{white-space:nowrap}
+.where .warn,.where .linkish{white-space:nowrap}
+@media(max-width:360px){.pills button{font-size:13px;padding:0 4px}#radius+.pills{gap:5px}.where{font-size:12px}.where .linkish{margin-left:6px}}
+.where{flex-wrap:wrap;row-gap:4px}
+.where .linkish{margin-left:0}
+.where .warn{margin-right:10px}
+.garage button[aria-pressed=true]{color:var(--bg)}
+#qty+.pills{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr)) minmax(0,1.4fr);gap:6px}
+@media(max-width:400px){#qty+.pills button{font-size:13px}}
+#qty+.pills button{min-width:0;padding:0 4px}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -455,9 +474,8 @@ main{gap:14px}
     </div>
     <div class="garage" id="garage" role="group" aria-label="Mes véhicules"></div>
     <div id="carEdit">
-      <div class="grp"><label class="lbl" for="plate">Plaque d'immatriculation</label>
-      <div class="platein"><span class="pf" aria-hidden="true">F</span><input id="plate" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AB-123-CD"></div>
-      </div><div class="grp"><label class="lbl" for="carq">Modèle : marque, modèle, moteur, année</label>
+      <input id="plate" type="hidden">
+      <div class="grp"><label class="lbl" for="carq">Modèle : marque, modèle, moteur, année</label>
       <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016" autocomplete="off" enterkeyhint="done">
       <div id="carHits" class="hits"></div>
       <button type="button" id="noCar" class="linkish nocar">Pas de voiture précise : je choisis juste le carburant</button>
@@ -498,7 +516,7 @@ main{gap:14px}
 
   <section class="card" id="mainCard">
     <span class="lbl">Rayon</span>
-    <select id="radius" data-pills aria-label="Rayon"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="15">15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
+    <select id="radius" data-pills aria-label="Rayon"><option value="5">5 km</option><option value="10">10 km</option><option value="15" selected>15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
     <p id="where" class="where"></p>
     <div id="addrCard" hidden>
       <div class="addrrow">
@@ -530,7 +548,7 @@ main{gap:14px}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v20261123z</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v20261124d</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
