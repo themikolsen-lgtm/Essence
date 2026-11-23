@@ -251,28 +251,80 @@ $("logForm").addEventListener("submit", ev=>{
   store(all); refilter(); resetForm(); setForm(false); render();
 });
 
-// ---------- choisir une station proche : nom + prix du jour ----------
-$("stPickBtn").onclick = async () => {
-  const box = $("stPick");
-  if(!box.hidden){ box.hidden = true; return; }
-  box.hidden = false; box.innerHTML = `<p class="muted">Recherche des stations proches…</p>`;
-  try{
-    const r = await window.ESSENCE_NEARBY();
-    if(!r.list.length){ box.innerHTML = `<p class="muted">Aucune station trouvée à proximité pour le ${esc(r.fuel)}.</p>`; return; }
-    box.innerHTML = `<p class="muted">Prix du ${esc(r.fuel)} aujourd'hui :</p>` + r.list.map((x,i)=>`<button type="button" data-i="${i}">
-        <span>${esc(x.name)}</span><b>${fmt(x.price,3)} €</b><small>${esc(x.ville)} · ${fmt(x.km,1)} km</small></button>`).join("");
-    box.onclick = ev => {
-      const b = ev.target.closest("button[data-i]"); if(!b) return;
-      const x = r.list[+b.dataset.i];
-      $("lSt").value = `${x.name}${x.ville?", "+x.ville:""}`;
-      $("lP").value = x.price; lastTyped = "lP";
-      const l = num("lL"); if(l) $("lT").value = (l*x.price).toFixed(2);
-      box.hidden = true;
-      toast(`Prix rempli : ${fmt(x.price,3)} €/L`);
-      if(!l) try{ $("lL").focus(); }catch(e){}
-    };
-  }catch(e){ box.innerHTML = `<p class="muted">${esc(e.message||"Impossible de charger les stations.")}</p>`; }
-};
+// ---------- barre de recherche de station : proches d'abord, filtre par texte ----------
+const nrm = t => String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+let near = null, nearErr = "", fuelName = "", remote = [], remoteQ = "", tFind = null, picks = [], hl = -1;
+const box = $("stPick"), inp = $("lSt");
+function openPick(open){ box.hidden = !open; inp.setAttribute("aria-expanded", open?"true":"false"); }
+function mark(txt, q){
+  const t = esc(txt); if(!q) return t;
+  const words = q.split(" ").filter(w=>w.length>1); if(!words.length) return t;
+  const plain = nrm(txt); let out = t;
+  // surligner seulement si le texte affiché ne contient pas d'accent (sinon on garde le texte tel quel)
+  if(plain === String(txt).toLowerCase().replace(/[^a-z0-9]+/g," ").trim())
+    words.forEach(w=>{ out = out.replace(new RegExp("("+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","ig"),"<mark>$1</mark>"); });
+  return out;
+}
+function drawPick(){
+  const q = nrm(inp.value);
+  let html = "", list = [];
+  if(near === null && !nearErr){ box.innerHTML = `<p class="muted">Recherche des stations proches…</p>`; return; }
+  const words = q.split(" ").filter(Boolean);
+  const match = x => { const h = nrm(`${x.name} ${x.brand} ${x.ville} ${x.adresse} ${x.cp}`); return words.every(w=>h.includes(w)); };
+  const local = (near||[]).filter(x=>!q || match(x)).slice(0, q?20:12);
+  const seen = new Set(local.map(x=>x.id));
+  const far = q ? remote.filter(x=>!seen.has(x.id) && match(x)).slice(0,15) : [];
+  if(local.length){ html += `<p class="sec">${q?"Près de vous":"Les plus proches"} · ${esc(fuelName)}</p>`; list = list.concat(local); }
+  html += local.map((x,i)=>item(x,i,q)).join("");
+  if(far.length){ html += `<p class="sec">Autres résultats</p>` + far.map((x,i)=>item(x,local.length+i,q)).join(""); list = list.concat(far); }
+  if(!list.length){
+    html = nearErr && !q ? `<p class="muted">${esc(nearErr)}</p>`
+      : q.length>=3 && remoteQ!==q ? `<p class="muted">Recherche de « ${esc(inp.value.trim())} »…</p>`
+      : `<p class="muted">Aucune station trouvée${q?` pour « ${esc(inp.value.trim())} »`:""}.</p>`;
+  }
+  picks = list; hl = -1;
+  box.innerHTML = html;
+}
+function item(x,i,q){
+  return `<button type="button" role="option" data-i="${i}"><span>${mark(x.name,q)}</span><b>${fmt(x.price,3)} €</b>
+    <small>${mark(x.ville,q)}${x.adresse?` · ${mark(x.adresse,q)}`:""}${x.km!=null?` · ${fmt(x.km,1)} km`:""}</small></button>`;
+}
+async function loadNear(){
+  if(near !== null || nearErr) return;
+  try{ const r = await window.ESSENCE_NEARBY(); near = r.list; fuelName = r.fuel; }
+  catch(e){ near = []; nearErr = e.message || "Impossible de charger les stations."; }
+  if(!box.hidden) drawPick();
+}
+function choose(x){
+  inp.value = `${x.name}${x.ville?", "+x.ville:""}`;
+  $("lP").value = x.price; lastTyped = "lP";
+  const l = num("lL"); if(l) $("lT").value = (l*x.price).toFixed(2);
+  openPick(false);
+  toast(`Prix rempli : ${fmt(x.price,3)} €/L`);
+  if(!l) try{ $("lL").focus(); }catch(e){}
+}
+inp.addEventListener("focus", ()=>{ openPick(true); drawPick(); loadNear(); });
+inp.addEventListener("input", ()=>{
+  openPick(true); drawPick();
+  const q = nrm(inp.value); clearTimeout(tFind);
+  if(q.length>=3) tFind = setTimeout(async ()=>{
+    try{ const r = await window.ESSENCE_FIND(inp.value); if(nrm(inp.value)===q){ remote = r; remoteQ = q; drawPick(); } }
+    catch(e){ remoteQ = q; drawPick(); }
+  }, 350);
+});
+inp.addEventListener("keydown", ev=>{
+  if(box.hidden) return;
+  const btns = [...box.querySelectorAll("button[data-i]")];
+  if(ev.key==="ArrowDown"||ev.key==="ArrowUp"){ ev.preventDefault(); hl = Math.max(0, Math.min(btns.length-1, hl+(ev.key==="ArrowDown"?1:-1))); btns.forEach((b,i)=>b.classList.toggle("on", i===hl)); btns[hl]?.scrollIntoView({block:"nearest"}); }
+  else if(ev.key==="Enter" && picks.length){ ev.preventDefault(); choose(picks[Math.max(0,hl)]); }
+  else if(ev.key==="Escape"){ openPick(false); }
+});
+// pointerdown : choisir avant que le champ perde le focus
+box.addEventListener("pointerdown", ev=>{ const b = ev.target.closest("button[data-i]"); if(b){ ev.preventDefault(); choose(picks[+b.dataset.i]); } });
+box.addEventListener("click", ev=>{ const b = ev.target.closest("button[data-i]"); if(b && !box.hidden) choose(picks[+b.dataset.i]); });
+inp.addEventListener("blur", ()=>setTimeout(()=>openPick(false), 150));
+// changement de carburant / véhicule : recharger les stations proches
+window.addEventListener("essence-vehicle", ()=>{ near = null; nearErr = ""; remote = []; remoteQ = ""; });
 
 // ---------- depuis l'onglet « Trouver » ----------
 window.CARNET = {

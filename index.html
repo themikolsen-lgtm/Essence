@@ -460,6 +460,79 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
 #mainCard input.gauge{min-height:38px;margin:0}
 #mainCard .where{margin:0 2px;font-size:12px}
 #mainCard .where .i{width:13px;height:13px}
+
+/* Barre de recherche de station (carnet) */
+.stfield{margin-top:12px}
+.stfield .opt{font-weight:600;color:var(--muted);opacity:.8}
+.stsearch{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:999px;padding:0 6px 0 16px;border:2px solid transparent}
+.stsearch:focus-within{border-color:var(--accent)}
+.stsearch .i{width:18px;height:18px;color:var(--muted);flex:none}
+.stsearch input{border:0!important;background:transparent!important;padding-left:2px}
+.stsearch input:focus{outline:none;box-shadow:none}
+.stpick{max-height:300px;margin-top:8px}
+.stpick .sec{margin:6px 10px 2px;font-size:12px;font-weight:800;color:var(--muted)}
+.stpick button.on{outline:2px solid var(--accent)}
+.stpick mark{background:light-dark(#ffe7dc,#3a1f12);color:inherit;border-radius:4px;padding:0 2px}
+.fullchip{margin-top:12px;width:max-content;max-width:100%;padding:4px 16px}
+
+/* Interrupteurs « Aller-retour » / « Sans péage » / « Plein complet » : état écrit en clair */
+.chip{justify-content:space-between!important;gap:10px!important;padding:6px 6px 6px 14px!important;background:var(--bg)!important;color:var(--ink)!important;font-weight:700}
+.chip::before{display:none!important}
+.chip::after{content:"Non";flex:none;min-width:52px;text-align:center;padding:6px 10px;border-radius:999px;background:var(--field);color:var(--muted);font-size:13px;font-weight:800}
+
+.chip:has(input:checked)::after{content:"Oui ✓";background:var(--green);color:#fff}
+.chip:has(input:focus-visible){outline:3px solid var(--blue)}
+.chips{grid-template-columns:1fr 1fr!important}
+.fullchip{width:100%!important}
+/* Liste / Carte */
+.viewsw{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--field)}
+.viewsw button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;background:transparent;color:var(--muted)}
+.viewsw button .i{width:18px;height:18px}
+.viewsw button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+#map{display:block!important;height:min(62vh,520px)!important;border-radius:26px;overflow:hidden;z-index:0}
+#map
+/* Interrupteurs simples (aller-retour, sans péage, plein complet) */
+.chip{justify-content:space-between!important;gap:12px!important;padding:6px 8px 6px 16px!important;background:var(--bg)!important;color:var(--ink)!important;box-shadow:none!important;font-weight:700;min-height:50px!important}
+.chip::before{display:none!important}
+.chip::after{content:""!important;flex:none;width:48px!important;min-width:0!important;height:28px;padding:0!important;border-radius:999px;
+  background:radial-gradient(circle at 14px 50%,#fff 10px,transparent 10.6px),var(--field)!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.chip:has(input:checked)::after{background:radial-gradient(circle at calc(100% - 14px) 50%,#fff 10px,transparent 10.6px),var(--green)!important}
+.chips{grid-template-columns:1fr!important;gap:6px!important}
+/* ===== Cohérence : mêmes marges, mêmes titres, même alignement ===== */
+main{gap:12px;padding-left:12px;padding-right:12px}
+.card,.best{padding:16px}
+.ch2,#resultsPanel h2{font-size:16px!important;font-weight:800;margin:0 4px 10px!important;color:var(--ink)}
+#resultsPanel h2{margin-top:4px!important}
+.lbl{margin-left:4px}
+#status{text-align:left;margin:0 6px;font-size:13px}
+#prog{margin:0 2px}
+.viewsw{margin-top:4px}
+.where{margin-top:8px!important}
+#addrCard{margin-top:12px;padding-top:12px;border-top:1px solid var(--field)}
+.gorow{gap:10px}
+.kpis{gap:10px}
+.saved.foot{margin-top:4px}
+.chip:has(input:checked){box-shadow:none!important}
+[hidden]{display:none!important}
+
+/* Repères de la carte */
+.pin{background:none!important;border:0!important}
+.pinw{position:absolute;left:0;top:0;transform:translate(-50%,calc(-100% - 9px));display:flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border-radius:999px;
+  background:#fff;color:#14181f;font:800 13px/1 "Plus Jakarta Sans",system-ui,sans-serif;white-space:nowrap;box-shadow:0 6px 16px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06)}
+.pinw::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border:7px solid transparent;border-top-color:#fff;border-bottom:0}
+.pinw .av{width:24px;height:24px;font-size:9.5px;box-shadow:none!important}
+.pinw small{font-size:10px;font-weight:800;color:#667085;margin-left:-2px}
+.pinw.best{background:var(--green);color:#fff;font-size:15px;padding:5px 12px 5px 5px;box-shadow:0 8px 22px rgba(18,161,80,.45)}
+.pinw.best::after{border-top-color:var(--green)}
+.pinw.best .av{width:30px;height:30px;font-size:11px;box-shadow:0 0 0 2px #fff!important}
+.pinw.best small{color:#fff}
+.leaflet-marker-icon:hover .pinw{transform:translate(-50%,calc(-100% - 11px)) scale(1.06)}
+.me{position:absolute;left:0;top:0;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#0a84ff;border:3px solid #fff;box-shadow:0 0 0 0 rgba(10,132,255,.5);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(10,132,255,.45)}70%{box-shadow:0 0 0 16px rgba(10,132,255,0)}100%{box-shadow:0 0 0 0 rgba(10,132,255,0)}}
+.leaflet-popup-content-wrapper{border-radius:16px!important;font:14px/1.4 "Plus Jakarta Sans",system-ui,sans-serif}
+.leaflet-control-zoom a{border-radius:12px!important}
+.leaflet-control-zoom{border:0!important;box-shadow:0 4px 12px rgba(0,0,0,.2)!important;border-radius:12px!important;overflow:hidden}
+.chip:has(input:checked){box-shadow:none!important}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -567,8 +640,12 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
   <p id="status"></p>
   <div id="geohelp" class="geohelp"></div>
 
+  <div class="viewsw" id="viewSw" role="tablist" aria-label="Affichage des résultats" hidden>
+    <button type="button" role="tab" data-v="list" aria-selected="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>Liste</button>
+    <button type="button" role="tab" data-v="map" aria-selected="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>Carte</button>
+  </div>
   <section class="best" id="best"></section>
-  <div id="map"></div>
+  <div id="map" hidden></div>
 
   <section class="card" id="resultsPanel" style="display:none">
     <h2 id="resTitle">Toutes les stations</h2>
@@ -576,7 +653,7 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231557</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231611</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -605,12 +682,15 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
         <div><label class="lbl" for="lP">Prix / L</label><input id="lP" type="number" inputmode="decimal" min="0" step="0.001" placeholder="1,749"></div>
         <div><label class="lbl" for="lT">Total €</label><input id="lT" type="number" inputmode="decimal" min="0" step="0.01" placeholder="72,06"></div>
       </div>
-      <button type="button" id="stPickBtn" class="pickbtn"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg><span>Choisir une station proche<small>remplit le prix du jour</small></span></button>
-      <div id="stPick" class="stpick" hidden></div>
-      <div class="row r2">
-        <div><label class="lbl" for="lSt">Station (facultatif)</label><input id="lSt" type="text" placeholder="ex. E.Leclerc Arnas"></div>
-        <div><span class="lbl">&nbsp;</span><label class="chip"><input type="checkbox" id="lFull" checked>Plein complet</label></div>
+      <div class="stfield">
+        <label class="lbl" for="lSt">Station <span class="opt">· remplit le prix du jour</span></label>
+        <div class="stsearch">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="lSt" type="search" autocomplete="off" enterkeyhint="search" placeholder="Enseigne, ville ou adresse" role="combobox" aria-expanded="false" aria-controls="stPick" aria-autocomplete="list">
+        </div>
+        <div id="stPick" class="stpick" role="listbox" hidden></div>
       </div>
+      <label class="chip fullchip"><input type="checkbox" id="lFull" checked>Plein complet</label>
       <div class="saverow">
         <button type="submit" class="primary" id="lSave">Enregistrer le plein</button>
         <button type="button" id="lCancel" hidden>Annuler</button>
@@ -631,10 +711,10 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611231557"></script>
-<script src="app.js?v=202611231557"></script>
-<script src="carnet.js?v=202611231557"></script>
-<script src="firebase-config.js?v=202611231557"></script>
-<script type="module" src="compte.js?v=202611231557"></script>
+<script src="cars.js?v=202611231611"></script>
+<script src="app.js?v=202611231611"></script>
+<script src="carnet.js?v=202611231611"></script>
+<script src="firebase-config.js?v=202611231611"></script>
+<script type="module" src="compte.js?v=202611231611"></script>
 </body>
 </html>

@@ -104,23 +104,40 @@ function selectCar(e, closeList=true){
 }
 const isEV = () => $("fuel").value==="elec";
 // stations proches avec leur prix du jour, pour le carnet
+// stations avec leur prix du jour, pour le carnet : proches (triées par distance) + recherche par texte
+async function ensureOrigin(){
+  if(origin) return origin;
+  const q = $("addr").value.trim();
+  if(q && !q.startsWith("📍")) return origin = await geocode(q);
+  try{ const pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
+       return origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"}; }
+  catch(e){ return null; }
+}
+const toPick = (s, brands) => { if(brands[s.id]) s.brand = brands[s.id];
+  return {id:s.id, name:sName(s), brand:s.brand||"", ville:s.ville||"", adresse:s.adresse||"", cp:s.cp||"", price:s.price, km: origin ? haversine(origin,s) : null}; };
 window.ESSENCE_NEARBY = async () => {
   if(isEV()) throw new Error("Le carnet suit les pleins de carburant : choisissez un carburant dans votre voiture.");
-  if(!origin){
-    const q = $("addr").value.trim();
-    if(q && !q.startsWith("📍")) origin = await geocode(q);
-    else {
-      try{ const pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
-           origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"}; }
-      catch(e){ throw new Error("Position inconnue : indiquez une adresse dans l'onglet « Trouver » (bouton Détails)."); }
-    }
-  }
+  const o = await ensureOrigin();
+  if(!o) throw new Error("Position inconnue : tapez une enseigne ou une ville pour chercher une station.");
   const fuel = $("fuel").value;
-  let st = await fetchStations(origin, fuel, Math.max(10, +$("radius").value||10));
+  const st = await fetchStations(o, fuel, 30);
   const brands = await BRANDS;
-  st.forEach(s=>{ if(brands[s.id]) s.brand = brands[s.id]; s.km = haversine(origin,s); });
-  st.sort((a,b)=>a.km-b.km);
-  return {fuel:FUELS[fuel], list: st.slice(0,15).map(s=>({name:sName(s), ville:s.ville||"", adresse:s.adresse||"", price:s.price, km:s.km, maj:s.maj}))};
+  return {fuel:FUELS[fuel], list: st.map(s=>toPick(s,brands)).sort((a,b)=>a.km-b.km)};
+};
+// recherche par ville / adresse dans toute la France (prix du carburant choisi)
+window.ESSENCE_FIND = async (text) => {
+  const fuel = $("fuel").value;
+  const q = String(text).replace(/["\\]/g," ").trim();
+  if(q.length < 3) return [];
+  const where = `(search(ville, "${q}") or search(adresse, "${q}") or search(cp, "${q}")) and ${fuel}_prix is not null`;
+  const r = await fetch(`${API}?limit=40&where=${encodeURIComponent(where)}`);
+  if(!r.ok) return [];
+  const brands = await BRANDS;
+  const list = ((await r.json()).results||[]).map(s=>{
+    const lat = s.geom?.lat ?? (+s.latitude/100000), lon = s.geom?.lon ?? (+s.longitude/100000);
+    return toPick({id:String(s.id), adresse:s.adresse, ville:s.ville, cp:s.cp, lat, lon, price:+s[fuel+"_prix"]}, brands);
+  }).filter(x=>x.price>0);
+  return list.sort((a,b)=>(a.km??1e9)-(b.km??1e9));
 };
 window.ESSENCE_CAR = () => car ? {name:`${car.brand} ${car.model}`, conso:car.conso, fuel:car.fuel} : null;
 window.ESSENCE_SET_CONSO = v => { $("conso").value = v; updSummary(); save(); };
@@ -278,7 +295,7 @@ function switchVehicle(id){
   garage.active = id; writeGarage();
   applySnap(activeVeh().snap||{});
   save(); renderGarage(); render.done=false;
-  $("best").style.display="none"; $("resultsPanel").style.display="none";
+  $("best").style.display="none"; $("resultsPanel").style.display="none"; $("viewSw").hidden=true; $("map").hidden=true; LAST=null;
   window.dispatchEvent(new Event("essence-vehicle"));
 }
 function addVehicle(){
@@ -640,9 +657,26 @@ function render(st, o){
       <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div>${s.maj?`<div class="when">prix du ${new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</div>`:""}</td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
-  try{ drawMap(st); }catch(e){}
+  showResults(st);
   if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
   render.done = true;
+}
+// ---------- affichage des résultats : Liste ou Carte ----------
+let VIEW = "list", LAST = null;
+function setView(v){
+  VIEW = v;
+  $("viewSw").querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected", b.dataset.v===v));
+  $("map").hidden = v!=="map";
+  // en vue carte, la carte passe juste sous le choix Liste / Carte
+  if(v==="map") $("viewSw").after($("map")); else $("best").after($("map"));
+  $("resultsPanel").style.display = LAST ? (v==="list" ? "block" : "none") : "none";
+  if(v==="map" && LAST){ try{ drawMap(LAST); }catch(e){} setTimeout(()=>{ try{ map && map.invalidateSize(); }catch(e){} }, 60); }
+}
+$("viewSw").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-v]"); if(b) setView(b.dataset.v); });
+function showResults(st){
+  LAST = st; $("viewSw").hidden = false;
+  if(VIEW==="map"){ $("resultsPanel").style.display="none"; try{ drawMap(st); }catch(e){} }
+  else { $("resultsPanel").style.display="block"; }
 }
 let leafletP = null;
 function loadLeaflet(){
@@ -653,19 +687,34 @@ function loadLeaflet(){
   });
   return leafletP;
 }
+let tiles = null, tilesDark = null;
 function drawMap(st){
   if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
-  $("map").style.display="block";
-  if(!map){ map=L.map("map"); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map); }
+  if($("map").hidden) return;
+  // fond de carte clair ou sombre selon le téléphone (CARTO, données OpenStreetMap)
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); }
+  if(!tiles || tilesDark!==dark){
+    if(tiles) tiles.remove();
+    tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${dark?"dark_all":"voyager"}/{z}/{x}/{y}{r}.png`,
+      {subdomains:"abcd", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+    tilesDark = dark;
+  }
   if(layer) layer.remove();
   layer = L.layerGroup().addTo(map);
-  L.circleMarker([origin.lat,origin.lon],{radius:9,color:"#0a5cff",fillOpacity:1}).bindPopup("Départ").addTo(layer);
+  // vous êtes ici : point bleu qui pulse
+  L.marker([origin.lat,origin.lon],{icon:L.divIcon({className:"pin", html:`<span class="me"></span>`, iconSize:[0,0]}), zIndexOffset:-100, keyboard:false})
+    .bindPopup(`<b>Vous êtes ici</b><br>${esc(origin.label||"")}`).addTo(layer);
+  // stations : bulle avec pastille d'enseigne + prix (ou temps de charge), la meilleure en vert
   st.forEach((s,i)=>{
-    L.circleMarker([s.lat,s.lon],{radius:i?6:11,color:i?"#e6261f":"#00a05a",fillOpacity:.9})
-      .bindPopup(s.popup || `<b>${i+1}. ${esc(sName(s))}</b><br>${esc(s.adresse)}, ${esc(s.ville)}<br>${fmt(s.price,3)} €/L – total ${fmt(s.total)} €`).addTo(layer);
+    const name = s.ch ? evName(s) : (s.brand || sName(s));
+    const val = s.ch ? fmtMin(s.ch.min) : `${fmt(s.price,3)} €`;
+    const html = `<div class="pinw${i?"":" best"}" style="z-index:${i?1:2}">${avatar(name)}<b>${val}</b>${i?`<small>${i+1}</small>`:`<small>★</small>`}</div>`;
+    L.marker([s.lat,s.lon],{icon:L.divIcon({className:"pin", html, iconSize:[0,0]}), zIndexOffset: i?(-i):1000, riseOnHover:true, title:name})
+      .bindPopup(s.popup || `<b>${i+1}. ${esc(sName(s))}</b><br>${esc(s.adresse)}, ${esc(s.ville)}<br>${fmt(s.price,3)} €/L – total ${fmt(s.total)} €`, {offset:[0,-34]}).addTo(layer);
   });
   map.invalidateSize();
-  map.fitBounds(L.latLngBounds([[origin.lat,origin.lon],...st.map(s=>[s.lat,s.lon])]).pad(0.1));
+  map.fitBounds(L.latLngBounds([[origin.lat,origin.lon],...st.map(s=>[s.lat,s.lon])]).pad(0.15), {maxZoom:15});
 }
 
 // =====================================================================
@@ -802,7 +851,7 @@ function renderEV(st, ctx, rt){
     <td class="n" data-l="Écart">${s.cost!=null?fmt(s.cost,0)+" €":(s.g?"0 €":"? €")}</td></tr>`).join("");
   $("rows").onclick = ev => { const b=ev.target.closest(".nearbtn"); if(!b) return; b.disabled=true; loadNearby(st[+b.dataset.i], b.nextElementSibling).then(()=>b.remove()); };
   st.forEach((s,i)=>{ s.popup = `<b>${i+1}. ${esc(evName(s))}</b><br>${esc(s.a)}<br>${fmt(s.p,0)} kW – charge ${fmtMin(s.ch.min)}`; });
-  drawMap(st);
+  showResults(st);
   if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
   render.done = true;
 }
