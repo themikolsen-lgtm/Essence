@@ -139,7 +139,8 @@ $("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary
 const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
 function updSummary(){
-  $("sumName").textContent = car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : `${FUELS[$("fuel").value]||"Carburant"} (sans voiture précise)`;
+  const pl = (typeof activeVeh==="function" && garage.list.length) ? activeVeh()?.plate : "";
+  $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : `${FUELS[$("fuel").value]||"Carburant"} (sans voiture précise)`);
   const c = +$("conso").value;
   if(isEV()){
     $("sumInfo").textContent = `Électrique${c>0?" · "+fmt(c,1)+" kWh/100":""} · ${$("socNow").value} → ${$("socTarget").value} %`;
@@ -162,6 +163,7 @@ function updSummary(){
 function setCarOpen(open){
   if(!open && !(+$("conso").value>0)) open = true;
   $("carBox").classList.toggle("closed", !open);
+  if(typeof renderGarage==="function" && garage.list.length) renderGarage();
   if(open) setTimeout(()=>{ try{ $("carq").focus(); }catch(e){} }, 50);
 }
 $("carEditBtn").addEventListener("click", ()=>setCarOpen(true));
@@ -215,8 +217,112 @@ function updQ(){
 
 // ---------- préférences ----------
 const carKey = e => e ? [e.brand,e.model,e.gen,e.eng].join("|") : null;
+
+// =====================================================================
+// ---------- Mes véhicules (par plaque) ----------
+// =====================================================================
+const GKEY = "essence_garage";
+let garage = {list:[], active:null, del:[]};
+const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const activeVeh = () => garage.list.find(v=>v.id===garage.active) || garage.list[0];
+function normPlate(t){
+  const c = String(t||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(c)) return `${c.slice(0,2)}-${c.slice(2,5)}-${c.slice(5)}`;
+  return String(t||"").toUpperCase().replace(/\s+/g," ").trim().slice(0,12);
+}
+const plateHTML = (p, big) => p ? `<span class="plate${big?" big":""}"><i>F</i><span>${esc(p)}</span></span>` : "";
+function snap(){
+  return {carKey:carKey(car), carq:$("carq").value, fuel:$("fuel").value, conso:$("conso").value, qty:$("qty").value, tank:$("tank").value,
+          liters:$("liters").value, soc:$("socNow").value, tgt:$("socTarget").value, bat:$("bat").value, dc:$("dcmax").value, ac:$("acmax").value};
+}
+function writeGarage(){ try{ localStorage.setItem(GKEY, JSON.stringify(garage)); }catch(e){} }
+function saveVehicle(){
+  const v = activeVeh(); if(!v) return;
+  v.snap = snap(); v.u = Date.now(); delete v.blank;
+  writeGarage(); renderGarage();
+}
+function applySnap(sn){
+  const was = RESTORING; RESTORING = true;
+  try{
+    car = null; $("carHits").innerHTML = "";
+    $("carq").value = sn.carq || "";
+    const found = sn.carKey ? ENTRIES.find(e=>carKey(e)===sn.carKey) : null;
+    if(found) selectCar(found, false); else fillFuels(Object.keys(FUELS));
+    if(sn.fuel) fillFuels([...$("fuel").options].map(o=>o.value), sn.fuel);
+    [["conso","conso"],["qty","qty"],["tank","tank"],["liters","liters"],["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"]]
+      .forEach(([k,id])=>{ if(sn[k]!=null && sn[k]!=="") $(id).value = sn[k]; });
+    if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
+    if(!car && !(+$("conso").value>0)) noCarDefaults();
+    updQ(); updSoc(); updSummary();
+  } finally { RESTORING = was; }
+}
+function renderGarage(){
+  const v = activeVeh();
+  $("plate").value = v?.plate || "";
+  const many = garage.list.length > 1, editing = !$("carBox").classList.contains("closed");
+  $("vehDel").hidden = !many;
+  $("garage").innerHTML = many ? garage.list.map(x=>{
+      const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
+      const label = x.plate ? plateHTML(x.plate) : esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel]||"Véhicule"));
+      return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}">${label}</button>`;
+    }).join("") + (editing ? "" : `<button type="button" class="add" data-add="1" aria-label="Ajouter un véhicule">+</button>`) : "";
+  updSummary();
+}
+function switchVehicle(id){
+  if(id===garage.active) return;
+  saveVehicle();
+  garage.active = id; writeGarage();
+  applySnap(activeVeh().snap||{});
+  save(); renderGarage(); render.done=false;
+  $("best").style.display="none"; $("resultsPanel").style.display="none";
+  window.dispatchEvent(new Event("essence-vehicle"));
+}
+function addVehicle(){
+  saveVehicle();
+  const v = {id:newId(), plate:"", u:Date.now(), snap:{fuel:"e10", qty:"R", tank:"45", soc:"20", tgt:"80"}};
+  garage.list.push(v); garage.active = v.id; writeGarage();
+  applySnap(v.snap); car = null; $("carq").value = "";
+  setCarOpen(true); renderGarage();
+  setTimeout(()=>{ try{ $("plate").focus(); }catch(e){} }, 60);
+  window.dispatchEvent(new Event("essence-vehicle"));
+}
+let delArmed = false;
+$("vehDel").addEventListener("click", ()=>{
+  if(garage.list.length<2) return;
+  if(!delArmed){ delArmed = true; $("vehDel").textContent = "Confirmer la suppression ?"; setTimeout(()=>{ delArmed=false; $("vehDel").textContent="Supprimer ce véhicule"; }, 4000); return; }
+  delArmed = false; $("vehDel").textContent = "Supprimer ce véhicule";
+  const id = garage.active;
+  garage.list = garage.list.filter(v=>v.id!==id); garage.del = [...new Set([...(garage.del||[]), id])];
+  garage.active = garage.list[0].id; writeGarage();
+  applySnap(activeVeh().snap||{}); save(); renderGarage();
+  window.dispatchEvent(new Event("essence-vehicle"));
+});
+$("vehAdd").addEventListener("click", addVehicle);
+$("garage").addEventListener("click", ev=>{
+  const b = ev.target.closest("button"); if(!b) return;
+  if(b.dataset.add) return addVehicle();
+  switchVehicle(b.dataset.v);
+});
+$("plate").addEventListener("input", ()=>{ const v = activeVeh(); if(v){ v.plate = normPlate($("plate").value); updSummary(); } });
+$("plate").addEventListener("change", ()=>{ $("plate").value = normPlate($("plate").value); save(); });
+function initGarage(){
+  try{ const g = JSON.parse(localStorage.getItem(GKEY)); if(g && Array.isArray(g.list)) garage = {del:[], ...g}; }catch(e){}
+  if(!garage.list.length){
+    // premier lancement : le véhicule actuel devient le premier de la liste
+    garage.list = [{id:newId(), plate:"", u:Date.now(), snap:snap(), ...(FIRST_VISIT?{blank:true}:{})}];
+    garage.active = garage.list[0].id; writeGarage();
+  } else {
+    if(!activeVeh()) garage.active = garage.list[0].id;
+    if(activeVeh().snap) applySnap(activeVeh().snap);
+  }
+  renderGarage();
+}
+window.ESSENCE_VEHICLE = () => garage.active;
+window.ESSENCE_FIRST_VEHICLE = () => garage.list[0]?.id;
+window.ESSENCE_PLATE = () => activeVeh()?.plate || "";
+
 let RESTORING = true;
-function save(){ if(!RESTORING){ try{ localStorage.setItem("essence_prefs_at", String(Date.now())); }catch(e){} }
+function save(){ if(!RESTORING){ try{ localStorage.setItem("essence_prefs_at", String(Date.now())); }catch(e){} saveVehicle(); }
   store.set("prefs2",{v:2,carKey:carKey(car),addr:$("addr").value.startsWith("📍")?"":$("addr").value.trim(),carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
   qty:$("qty").value,tank:$("tank").value,soc:$("socNow").value,tgt:$("socTarget").value,bat:$("bat").value,dc:$("dcmax").value,ac:$("acmax").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
@@ -240,10 +346,11 @@ if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
 // demander au navigateur de ne pas effacer ces données
 try{ navigator.storage?.persist?.(); }catch(e){}
 $("forget").addEventListener("click", ()=>{
-  try{ localStorage.removeItem("essence_prefs2"); }catch(e){}
+  try{ ["essence_prefs2","essence_garage"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   location.reload();
 });
 if(!car && !(+$("conso").value>0)){ if(!p) $("fuel").value="e10"; noCarDefaults(); }
+initGarage();
 updQ(); updSoc(); updSummary();
 $("carBox").classList.toggle("closed", !!p && +$("conso").value>0);
 RESTORING = false;
@@ -724,4 +831,5 @@ async function loadNearby(s, box){
       : `<span class="muted" style="color:inherit;opacity:.85">Rien de répertorié à moins de 500 m.</span>`;
   }catch(e){ box.innerHTML = `<span class="muted" style="color:inherit;opacity:.85">Impossible de charger les lieux à proximité.</span>`; }
 }
+
 }

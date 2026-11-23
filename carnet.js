@@ -10,7 +10,13 @@ const DELKEY = "essence_carnet_deleted";
 const markDeleted = (id, on) => { try{ const d = new Set(JSON.parse(localStorage.getItem(DELKEY)||"[]")); on ? d.add(id) : d.delete(id); localStorage.setItem(DELKEY, JSON.stringify([...d])); }catch(e){} };
 const today = () => new Date().toISOString().slice(0,10);
 const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
-let entries = load(), editing = null, undo = null;
+let all = load(), entries = [], editing = null, undo = null;
+const vid = () => window.ESSENCE_VEHICLE?.() || null;
+function refilter(){
+  const id = vid(), first = window.ESSENCE_FIRST_VEHICLE?.() || null;
+  entries = id ? all.filter(e => (e.v || first) === id) : all.slice();
+}
+refilter();
 
 // ---------- onglets ----------
 function showTab(log){
@@ -196,6 +202,23 @@ new ResizeObserver(()=>{ if(!$("tabLog").hidden) drawChart(stats()); }).observe(
 $("addFill").onclick = () => { resetForm(); setForm(true); try{ $("lKm").focus({preventScroll:true}); }catch(e){} };
 $("closeForm").onclick = () => { resetForm(); setForm(false); };
 
+// ---------- modifier / supprimer un plein ----------
+$("hist").addEventListener("click", ev=>{
+  const b = ev.target.closest("button"); if(!b) return;
+  if(b.dataset.del){
+    const i = all.findIndex(e=>e.id===b.dataset.del); if(i<0) return;
+    undo = {e:all[i], i}; markDeleted(undo.e.id, true); all.splice(i,1); store(all); refilter(); render();
+    toast("Plein supprimé.", "Annuler", ()=>{ markDeleted(undo.e.id, false); all.splice(undo.i,0,undo.e); store(all); refilter(); render(); });
+  }
+  if(b.dataset.edit){
+    const e = all.find(x=>x.id===b.dataset.edit); if(!e) return;
+    editing = e.id;
+    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
+    $("logFormTitle").textContent="Modifier le plein"; $("lSave").textContent="Enregistrer les modifications"; $("lCancel").hidden=false;
+    setForm(true);
+  }
+});
+
 // ---------- formulaire ----------
 const num = id => { const v = parseFloat(String($(id).value).replace(",",".")); return isFinite(v) ? v : null; };
 let lastTyped = "lP";
@@ -223,8 +246,9 @@ $("logForm").addEventListener("submit", ev=>{
   const prev = entries.filter(x=>x.km && x.id!==e.id && x.date<=e.date).sort((a,b)=>b.km-a.km)[0];
   if(e.km && prev && e.km < prev.km) toast("Attention : compteur plus petit qu'au plein précédent.");
   else toast(editing ? "Plein modifié ✓" : "Plein enregistré ✓");
-  if(editing){ const i=entries.findIndex(x=>x.id===editing); entries[i]=e; } else entries.push(e);
-  store(entries); resetForm(); setForm(false); render();
+  e.v = vid();
+  if(editing){ const i=all.findIndex(x=>x.id===editing); if(i>=0) all[i]={...all[i],...e}; } else all.push(e);
+  store(all); refilter(); resetForm(); setForm(false); render();
 });
 
 // ---------- choisir une station proche : nom + prix du jour ----------
@@ -283,11 +307,11 @@ $("lImport").onchange = async ev => {
     const L=parseFloat(String(l).replace(",",".")), P=parseFloat(String(p).replace(",",".")), T=parseFloat(String(t).replace(",","."));
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || !(L>0)) continue;
     if(entries.some(e=>e.date===date && Math.abs(e.l-L)<0.01)) continue; // déjà présent
-    entries.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), date, km: parseInt(km)||null, l:L,
+    all.push({v:vid(), u:Date.now(), id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), date, km: parseInt(km)||null, l:L,
                   p: P>0?P:(T>0?T/L:0), t: T>0?T:(P>0?P*L:0), full: !/^non/i.test(full||""), st:(st||"").trim()});
     added++;
   }
-  store(entries); render(); ev.target.value="";
+  store(all); refilter(); render(); ev.target.value="";
   toast(added ? `${added} plein${added>1?"s":""} importé${added>1?"s":""} ✓` : "Aucun nouveau plein dans ce fichier.");
 };
 
@@ -301,7 +325,8 @@ function toast(msg, action, fn){
   tTimer = setTimeout(()=>t.hidden=true, action?6000:3500);
 }
 
-window.addEventListener("essence-synced", ()=>{ entries = load(); render(); });
+window.addEventListener("essence-synced", ()=>{ all = load(); refilter(); render(); });
+window.addEventListener("essence-vehicle", ()=>{ refilter(); resetForm(); formOpen=false; render(); });
 resetForm();
 render();
 if(location.hash === "#carnet") showTab(true);

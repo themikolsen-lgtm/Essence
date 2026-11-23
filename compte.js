@@ -2,7 +2,7 @@
 // S'active uniquement si window.FIREBASE_CONFIG est renseigné (voir firebase-config.js).
 const cfg = window.FIREBASE_CONFIG;
 const $ = id => document.getElementById(id);
-const K = {prefs:"essence_prefs2", prefsAt:"essence_prefs_at", carnet:"essence_carnet", del:"essence_carnet_deleted"};
+const K = {prefs:"essence_prefs2", prefsAt:"essence_prefs_at", carnet:"essence_carnet", del:"essence_carnet_deleted", garage:"essence_garage"};
 const SDK = "https://www.gstatic.com/firebasejs/10.14.1";
 
 if (cfg && cfg.apiKey) start().catch(e => console.error("Compte :", e));
@@ -68,7 +68,7 @@ async function start(){
   // ---------- données locales ----------
   const readJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e) { return d; } };
   const local = () => ({ prefs: localStorage.getItem(K.prefs) || "", prefsAt: +localStorage.getItem(K.prefsAt) || 0,
-                         carnet: readJSON(K.carnet, []), deleted: readJSON(K.del, []) });
+                         carnet: readJSON(K.carnet, []), deleted: readJSON(K.del, []), garage: readJSON(K.garage, null) });
 
   // toute modification locale est envoyée au compte (avec un petit délai)
   const setItem = Storage.prototype.setItem;
@@ -84,7 +84,7 @@ async function start(){
     if(!user) return;
     const l = local();
     try {
-      await F.setDoc(ref(), { prefs:l.prefs, prefsAt:l.prefsAt, carnet:l.carnet, deleted:l.deleted.slice(-500), updatedAt:F.serverTimestamp() });
+      await F.setDoc(ref(), { prefs:l.prefs, prefsAt:l.prefsAt, carnet:l.carnet, deleted:l.deleted.slice(-500), garage:l.garage||null, updatedAt:F.serverTimestamp() });
       state(`Synchronisé à ${new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})} ✓`);
     } catch(e) { state("Synchronisation impossible : " + message(e)); }
   }
@@ -109,16 +109,27 @@ async function start(){
     const prefs = useRemotePrefs ? r.prefs : l.prefs;
     const prefsAt = Math.max(r.prefsAt||0, l.prefsAt);
 
+    // véhicules : réunis par identifiant (le plus récent gagne), suppressions respectées
+    const lg = l.garage || {list:[],del:[]}, rg = r.garage || {list:[],del:[]};
+    const gdel = new Set([...(rg.del||[]), ...(lg.del||[])]);
+    const gmap = new Map();
+    // un véhicule vide créé automatiquement sur un nouvel appareil est ignoré si le compte en a déjà
+    const lList = (rg.list||[]).length ? (lg.list||[]).filter(v=>!v.blank) : (lg.list||[]);
+    for (const v of [...(rg.list||[]), ...lList]) { if(!v || gdel.has(v.id)) continue; const pv = gmap.get(v.id); if(!pv || (v.u||0) > (pv.u||0)) gmap.set(v.id, v); }
+    const garage = gmap.size ? {list:[...gmap.values()], del:[...gdel], active: (useRemotePrefs || !gmap.has(lg.active) ? rg.active : lg.active) || [...gmap.keys()][0]} : (l.garage || r.garage || null);
+    if (garage && !garage.list.some(v=>v.id===garage.active)) garage.active = garage.list[0]?.id;
+    const garageChanged = JSON.stringify(garage) !== JSON.stringify(l.garage);
     const carnetChanged = JSON.stringify(carnet) !== JSON.stringify([...l.carnet].sort((a,b)=>a.date.localeCompare(b.date)));
     applying = true;
     try {
       setItem.call(localStorage, K.carnet, JSON.stringify(carnet));
       setItem.call(localStorage, K.del, JSON.stringify([...deleted]));
       if (useRemotePrefs) { setItem.call(localStorage, K.prefs, prefs); setItem.call(localStorage, K.prefsAt, String(prefsAt)); }
+      if (garage) setItem.call(localStorage, K.garage, JSON.stringify(garage));
     } finally { applying = false; }
     await push();
 
-    if (useRemotePrefs && prefs !== l.prefs) {
+    if ((useRemotePrefs && prefs !== l.prefs) || garageChanged) {
       // nouveaux réglages venus d'un autre appareil : on recharge une fois pour les appliquer
       if (!sessionStorage.getItem("essence_synced_reload")) { sessionStorage.setItem("essence_synced_reload","1"); location.reload(); return; }
     }

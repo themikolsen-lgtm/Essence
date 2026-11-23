@@ -351,6 +351,24 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
 .socbar i{position:absolute;left:0;top:0;bottom:0;background:var(--red);border-radius:999px;transition:width .2s}
 .socbar b{position:absolute;top:0;bottom:0;background:var(--green);opacity:.85;transition:all .2s}
 .meta span{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+
+/* Véhicules et plaques */
+.plate{display:inline-flex;align-items:stretch;border:2px solid #1b1b1b;border-radius:6px;background:#fff;color:#111;font:800 13px/1 "Plus Jakarta Sans",system-ui,sans-serif;letter-spacing:.04em;overflow:hidden;white-space:nowrap;vertical-align:middle}
+.plate i{font-style:normal;background:#003399;color:#fff;font-size:9px;padding:0 4px;display:flex;align-items:flex-end;padding-bottom:2px}
+.plate span{padding:3px 6px}
+.plate.big{font-size:16px}.plate.big i{font-size:10px;padding:0 5px 3px}.plate.big span{padding:5px 8px}
+.sumtxt .plate{margin-bottom:4px}
+.platein{display:flex;align-items:stretch;border:2px solid #1b1b1b;border-radius:12px;overflow:hidden;background:#fff;max-width:260px}
+.platein .pf{background:#003399;color:#fff;font-weight:800;display:flex;align-items:center;padding:0 10px;font-size:15px}
+.platein input{border:0!important;border-radius:0!important;background:#fff!important;color:#111!important;font-weight:800;font-size:20px;letter-spacing:.08em;text-transform:uppercase;min-height:48px}
+.garage{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.garage:empty{display:none}
+.garage button{width:auto;min-height:40px;padding:0 10px;background:var(--bg);display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.garage button[aria-pressed=true]{outline:3px solid var(--accent);outline-offset:1px}
+.garage button.add{background:var(--field);font-weight:800}
+.vehacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.vehacts button{width:auto;flex:1 1 auto;min-height:42px;font-size:14px;background:var(--field)}
+.vehacts .danger{color:var(--red)}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -391,8 +409,11 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
       <div class="sumtxt"><b id="sumName">Votre voiture</b><span class="muted" id="sumInfo"></span></div>
       <button type="button" class="ghost" id="carEditBtn">Modifier</button>
     </div>
+    <div class="garage" id="garage" role="group" aria-label="Mes véhicules"></div>
     <div id="carEdit">
-      <label class="lbl" for="carq">Votre voiture : marque, modèle, moteur, année</label>
+      <label class="lbl" for="plate">Plaque d'immatriculation</label>
+      <div class="platein"><span class="pf" aria-hidden="true">F</span><input id="plate" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AB-123-CD"></div>
+      <label class="lbl" for="carq" style="margin-top:10px">Votre voiture : marque, modèle, moteur, année</label>
       <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016" autocomplete="off" enterkeyhint="done">
       <div id="carHits" class="hits"></div>
       <button type="button" id="noCar" class="linkish nocar">Pas de voiture précise : je choisis juste le carburant</button>
@@ -427,6 +448,7 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
         <div><label class="lbl" for="conso" id="consoLbl">Conso (L/100)</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
         <div><button type="button" class="primary" id="carOk">Valider</button></div>
       </div>
+      <div class="vehacts"><button type="button" id="vehAdd">+ Ajouter un autre véhicule</button><button type="button" id="vehDel" class="danger">Supprimer ce véhicule</button></div>
     </div>
   </section>
 
@@ -465,7 +487,7 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
   <p class="muted saved">✓ Vos réglages (voiture, quantité, rayon, adresse) sont enregistrés sur cet appareil, rien que pour vous. <button type="button" id="forget" class="linkish">Effacer mes réglages</button></p>
-  <p class="muted" style="text-align:center">Version 20261123x</p>
+  <p class="muted" style="text-align:center">Version 20261123y</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -521,10 +543,10 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123x"></script>
-<script src="app.js?v=20261123x"></script>
-<script src="carnet.js?v=20261123x"></script>
-<script src="firebase-config.js?v=20261123x"></script>
-<script type="module" src="compte.js?v=20261123x"></script>
+<script src="cars.js?v=20261123y"></script>
+<script src="app.js?v=20261123y"></script>
+<script src="carnet.js?v=20261123y"></script>
+<script src="firebase-config.js?v=20261123y"></script>
+<script type="module" src="compte.js?v=20261123y"></script>
 </body>
 </html>
