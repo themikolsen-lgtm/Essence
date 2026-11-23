@@ -369,6 +369,50 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
 .vehacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .vehacts button{width:auto;flex:1 1 auto;min-height:42px;font-size:14px;background:var(--field)}
 .vehacts .danger{color:var(--red)}
+
+/* ===== Équilibre : une seule couleur d'action, rythme régulier ===== */
+main{gap:14px}
+.card{padding:16px;border-radius:26px}
+.lbl{font-size:13px;font-weight:700;margin:0 0 6px 4px;color:var(--muted)}
+.grp{margin-top:16px}
+.grp:first-child{margin-top:4px}
+.grp+.grp{padding-top:14px;border-top:1px solid var(--field)}
+#carEdit .row{margin-top:10px}
+/* actions secondaires en neutre : l'orange reste pour l'action principale et les chiffres clés */
+.ghost{background:var(--field);color:var(--ink);border:0!important;font-weight:700}
+.pills button[aria-pressed=true],#radius+.pills button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.nocar{color:var(--muted);font-weight:600;text-decoration:underline;font-size:13px;margin:8px 4px 0}
+.sum .ic{background:var(--ink);color:var(--bg)}
+.sumtxt b{font-size:17px;-webkit-line-clamp:3}
+.sumtxt .muted{display:block;margin-top:2px}
+.garage{margin:12px 0 0}
+.garage button{background:var(--field)}
+.garage button[aria-pressed=true]{outline:none;background:var(--ink)}
+.garage button[aria-pressed=true] .plate{border-color:#fff}
+#more{background:var(--field);color:var(--ink)}
+#more[aria-expanded=true]{background:var(--ink);color:var(--bg)}
+.where{margin-top:10px}
+.chip:has(input:checked){background:var(--ink);color:var(--bg)}
+.chip:has(input:checked)::before{background:var(--bg);border-color:var(--bg)}
+/* liste des stations */
+.stack td[data-l="Station"] .sub{font-size:13px;color:var(--muted);margin-top:1px}
+.stack td[data-l="Station"] .when{font-size:11px;color:var(--muted);margin-top:4px}
+.meta span{background:var(--bg)}
+.meta span:first-child{background:light-dark(#ffe7dc,#3a1f12);color:var(--accent)}
+.stack tr{padding:14px!important;row-gap:2px}
+/* carnet */
+.entry{padding:12px 4px}
+.entry .acts{justify-content:flex-end;gap:2px;margin-top:2px}
+.entry .acts button{background:transparent;color:var(--muted);min-height:40px;padding:0 10px;font-weight:700}
+.entry .acts button[data-del]{color:var(--red)}
+.mhead{border-bottom:2px solid var(--field);padding-bottom:6px}
+.kpi{border-radius:20px}
+/* bas de page */
+.foot{font-size:12px;text-align:center;margin:8px 0 4px}
+.foot .linkish{font-size:12px}
+#status{text-align:center;font-size:13px}
+#carEdit{margin-top:14px}
+#carBox.closed .garage{margin-top:12px}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -411,17 +455,17 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
     </div>
     <div class="garage" id="garage" role="group" aria-label="Mes véhicules"></div>
     <div id="carEdit">
-      <label class="lbl" for="plate">Plaque d'immatriculation</label>
+      <div class="grp"><label class="lbl" for="plate">Plaque d'immatriculation</label>
       <div class="platein"><span class="pf" aria-hidden="true">F</span><input id="plate" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AB-123-CD"></div>
-      <label class="lbl" for="carq" style="margin-top:10px">Votre voiture : marque, modèle, moteur, année</label>
+      </div><div class="grp"><label class="lbl" for="carq">Modèle : marque, modèle, moteur, année</label>
       <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016" autocomplete="off" enterkeyhint="done">
       <div id="carHits" class="hits"></div>
       <button type="button" id="noCar" class="linkish nocar">Pas de voiture précise : je choisis juste le carburant</button>
       <div id="carCard"></div>
-      <span class="lbl" style="margin-top:10px">Carburant</span>
+      </div><div class="grp"><span class="lbl">Carburant</span>
       <select id="fuel" data-pills aria-label="Carburant"></select>
-      <div id="thermBox">
-      <span class="lbl" style="margin-top:10px">Au moment du plein, il me reste</span>
+      </div><div id="thermBox" class="grp">
+      <span class="lbl">Au moment du plein, il me reste</span>
       <select id="qty" data-pills aria-label="Ce qu'il reste dans le réservoir"><option value="R" selected>Réserve</option><option value="0.25">¼</option><option value="0.5">½</option><option value="0.75">¾</option><option value="L">Litres</option></select>
       <div class="qline">
         <label id="tankBox">Réservoir <input id="tank" type="number" inputmode="numeric" step="1" min="20" max="120" value="45"> L</label>
@@ -430,7 +474,7 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
       </div>
       <p class="muted" id="qhint" style="margin:4px 16px 0">Réserve = il reste environ 4 L.</p>
       </div>
-      <div id="evBox" style="display:none">
+      <div id="evBox" class="grp" style="display:none">
         <div class="soc">
           <label class="lbl" for="socNow">Batterie au moment de recharger</label>
           <div class="socrow"><input id="socNow" type="range" min="0" max="95" step="1" value="20" aria-describedby="socNowV"><output id="socNowV" for="socNow">20 %</output></div>
@@ -486,8 +530,7 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved">✓ Vos réglages (voiture, quantité, rayon, adresse) sont enregistrés sur cet appareil, rien que pour vous. <button type="button" id="forget" class="linkish">Effacer mes réglages</button></p>
-  <p class="muted" style="text-align:center">Version 20261123y</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v20261123z</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -538,15 +581,15 @@ input[type=range]:focus-visible{outline:3px solid var(--blue);outline-offset:2px
       <label class="filebtn">Importer un CSV<input type="file" id="lImport" accept=".csv,text/csv"></label>
     </div>
   </section>
-  <p class="muted saved">✓ Votre carnet est enregistré sur cet appareil. Exportez-le de temps en temps pour le garder en sécurité.</p>
+  <p class="muted saved foot">Carnet enregistré sur cet appareil (et dans votre compte si vous êtes connecté).</p>
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123y"></script>
-<script src="app.js?v=20261123y"></script>
-<script src="carnet.js?v=20261123y"></script>
-<script src="firebase-config.js?v=20261123y"></script>
-<script type="module" src="compte.js?v=20261123y"></script>
+<script src="cars.js?v=20261123z"></script>
+<script src="app.js?v=20261123z"></script>
+<script src="carnet.js?v=20261123z"></script>
+<script src="firebase-config.js?v=20261123z"></script>
+<script type="module" src="compte.js?v=20261123z"></script>
 </body>
 </html>

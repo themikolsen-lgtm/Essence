@@ -139,14 +139,15 @@ $("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary
 const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
 function updSummary(){
-  const pl = (typeof activeVeh==="function" && garage.list.length) ? activeVeh()?.plate : "";
-  $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : `${FUELS[$("fuel").value]||"Carburant"} (sans voiture précise)`);
+  const pl = (typeof activeVeh==="function" && garage.list.length===1) ? activeVeh()?.plate : "";
+  $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""}` : `${FUELS[$("fuel").value]||"Carburant"} · sans modèle précis`);
+  const engTxt = car ? car.eng+" · " : "";
   const c = +$("conso").value;
   if(isEV()){
-    $("sumInfo").textContent = `Électrique${c>0?" · "+fmt(c,1)+" kWh/100":""} · ${$("socNow").value} → ${$("socTarget").value} %`;
+    $("sumInfo").textContent = `${engTxt}${c>0?fmt(c,1)+" kWh/100":""} · ${$("socNow").value} → ${$("socTarget").value} %`;
   } else {
     const l = litersToBuy();
-    $("sumInfo").textContent = `${FUELS[$("fuel").value]||""}${c>0?" · "+fmt(c,1)+" L/100":""}${l>0?" · plein "+l+" L":""}`;
+    $("sumInfo").textContent = `${engTxt}${car?"":""}${c>0?fmt(c,1)+" L/100":""}${l>0?" · plein "+l+" L":""}${car?" · "+(FUELS[$("fuel").value]||""):""}`;
   }
   // l'interface s'adapte : carburant ou électrique
   const ev = isEV();
@@ -631,8 +632,8 @@ function render(st, o){
   $("rows").onclick = null;
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}" style="animation-delay:${Math.min(i,10)*30}ms">
     <td data-l="Rang">${avatar(s.brand||sName(s))}<span class="rk">${i+1}</span></td>
-    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><br>${esc(s.adresse)}<br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · prix du "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span>
-      <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div></td>
+    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><div class="sub">${esc(s.adresse)}, ${esc(s.ville)}</div>
+      <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div>${s.maj?`<div class="when">prix du ${new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</div>`:""}</td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
   drawMap(st);
