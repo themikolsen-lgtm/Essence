@@ -432,6 +432,18 @@ main{gap:14px}
 #qty+.pills{display:grid;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr)) minmax(0,1.4fr);gap:6px}
 @media(max-width:400px){#qty+.pills button{font-size:13px}}
 #qty+.pills button{min-width:0;padding:0 4px}
+
+/* Jauge du rayon */
+.rhead{display:flex;justify-content:space-between;align-items:baseline}
+.rhead output{font-size:24px;font-weight:800;color:var(--ink);margin-right:4px}
+input.gauge{width:100%;margin:4px 0 0}
+input.gauge::-webkit-slider-runnable-track{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--accent) 0 var(--p),var(--field) var(--p) 100%)}
+input.gauge::-moz-range-track{height:12px;border-radius:999px;background:var(--field)}
+input.gauge::-moz-range-progress{height:12px;border-radius:999px;background:var(--accent)}
+input.gauge::-webkit-slider-thumb{width:32px;height:32px;margin-top:-10px;background:#fff;border:6px solid var(--accent)}
+input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px solid var(--accent)}
+.ticks{position:relative;height:16px;font-size:12px;font-weight:600;color:var(--muted);margin:0 16px}
+.ticks span{position:absolute;transform:translateX(-50%)}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -515,8 +527,9 @@ main{gap:14px}
   </section>
 
   <section class="card" id="mainCard">
-    <span class="lbl">Rayon</span>
-    <select id="radius" data-pills aria-label="Rayon"><option value="5">5 km</option><option value="10">10 km</option><option value="15" selected>15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
+    <div class="rhead"><label class="lbl" for="radius">Rayon de recherche</label><output id="radiusV" for="radius">15 km</output></div>
+    <input id="radius" class="gauge" type="range" min="5" max="100" step="5" value="15" style="--p:10.5%">
+    <div class="ticks" aria-hidden="true"><span style="left:0.0%">5</span><span style="left:21.1%">25</span><span style="left:47.4%">50</span><span style="left:73.7%">75</span><span style="left:100.0%">100</span></div>
     <p id="where" class="where"></p>
     <div id="addrCard" hidden>
       <div class="addrrow">
@@ -548,7 +561,7 @@ main{gap:14px}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v20261124d</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v20261124e</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>

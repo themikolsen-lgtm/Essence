@@ -214,6 +214,9 @@ function updQ(){
   $("pleinOut").textContent = litersToBuy()>0 ? litersToBuy()+" L" : "–";
   if(typeof updSummary==="function") updSummary();
 }
+// jauge du rayon : valeur affichée + remplissage
+function updRadius(){ const r = $("radius"), v = +r.value; $("radiusV").textContent = v+" km"; r.style.setProperty("--p", ((v-r.min)/(r.max-r.min)*100)+"%"); }
+$("radius").addEventListener("input", updRadius); updRadius();
 ["qty","tank","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>{ $(id).addEventListener("change",()=>{updQ();save();}); $(id).addEventListener("input",updQ); });
 
 // ---------- préférences ----------
@@ -339,7 +342,7 @@ if(p){
   if(p.fuel) fillFuels([...$("fuel").options].map(o=>o.value), p.fuel);
   if(p.conso) $("conso").value=p.conso;
   [["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"]].forEach(([k,id])=>{ if(p[k]!=null&&p[k]!=="") $(id).value=p[k]; });
-  ["qty","tank","liters","radius"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
+  ["qty","tank","liters"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
   $("roundtrip").checked = p.rt!==false;
   $("notoll").checked = !!p.nt;
 }
