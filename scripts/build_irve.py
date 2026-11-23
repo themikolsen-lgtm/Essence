@@ -28,9 +28,10 @@ def find_csv():
             say("métadonnées", ds, "échec :", e); continue
         res = [r for r in meta.get("resources", []) if (r.get("format") or "").lower() == "csv"]
         say("ressources CSV :", [r.get("title") for r in res][:10])
-        # la consolidation « statique » la plus récente
-        cand = [r for r in res if "statique" in (r.get("title") or "").lower() and "consolidation" in (r.get("title") or "").lower()] or \
-               [r for r in res if "statique" in (r.get("title") or "").lower()] or res
+        # la consolidation la plus récente (jamais la documentation)
+        res = [r for r in res if "documentation" not in (r.get("title") or "").lower()]
+        cand = [r for r in res if "dernière version" in (r.get("title") or "").lower()] or \
+               [r for r in res if "consolidation" in (r.get("title") or "").lower()] or res
         cand.sort(key=lambda r: r.get("last_modified") or "", reverse=True)
         if cand:
             say("fichier retenu :", cand[0].get("title"), cand[0].get("url"))
