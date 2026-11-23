@@ -148,6 +148,10 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
 .row.r2{grid-template-columns:1fr 1fr}
 .chips{grid-template-columns:1fr 1fr!important;margin-top:10px}
 .lbl{display:block}
+.qline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;font-size:15px;color:var(--muted);flex-wrap:wrap}
+.qline label{display:flex;align-items:center;gap:6px;margin:0}
+.qline input{width:72px;min-height:38px;text-align:center;padding:0 8px;font-weight:700;color:var(--ink)}
+.qout b{color:var(--accent);font-size:20px;font-weight:800}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -175,20 +179,12 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
   </section>
 
   <section class="card">
-    <div class="seg" role="radiogroup">
-      <label><input type="radio" name="qmode" value="plein" checked>Faire le plein</label>
-      <label><input type="radio" name="qmode" value="litres">Saisir les litres</label>
-    </div>
-    <div id="pleinBox">
-      <div class="row r2">
-        <div><label class="lbl" for="tank">Réservoir (L)</label><input id="tank" type="number" inputmode="numeric" step="1" min="20" max="120" value="45"></div>
-        <div><span class="lbl">À mettre</span><div class="out" id="pleinOut">–</div></div>
-      </div>
-      <span class="lbl" style="margin-top:10px">Jauge actuelle</span>
-      <select id="gauge" data-pills aria-label="Jauge actuelle"><option value="0">Vide</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select>
-    </div>
-    <div class="row" id="litresBox" style="display:none">
-      <div><label class="lbl" for="liters">Litres à mettre</label><input id="liters" type="number" inputmode="numeric" step="1" min="1" max="150" value="30"></div>
+    <span class="lbl">Combien je mets ?</span>
+    <select id="qty" data-pills aria-label="Quantité"><option value="1" selected>Plein</option><option value="0.75">¾</option><option value="0.5">½</option><option value="0.25">¼</option><option value="L">Litres</option></select>
+    <div class="qline">
+      <label id="tankBox">Réservoir <input id="tank" type="number" inputmode="numeric" step="1" min="20" max="120" value="45"> L</label>
+      <label id="litresBox" style="display:none">Je mets <input id="liters" type="number" inputmode="numeric" step="1" min="1" max="150" value="30"> L</label>
+      <span class="qout">→ <b id="pleinOut">–</b> à mettre</span>
     </div>
   </section>
 
@@ -218,11 +214,11 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123j</p>
+  <p class="muted" style="text-align:center">Version 20261123k</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123j"></script>
-<script src="app.js?v=20261123j"></script>
+<script src="cars.js?v=20261123k"></script>
+<script src="app.js?v=20261123k"></script>
 </body>
 </html>

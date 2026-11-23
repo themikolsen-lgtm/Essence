@@ -124,23 +124,22 @@ $("carq").addEventListener("input", ()=>{ clearTimeout(tCar); tCar=setTimeout(re
 $("carHits").addEventListener("click", ev=>{ const b=ev.target.closest("button"); if(b) selectCar(ENTRIES[+b.dataset.i]); });
 
 // ---------- quantité ----------
-function qmode(){ return document.querySelector('input[name=qmode]:checked').value; }
 function litersToBuy(){
-  if(qmode()==="litres") return +$("liters").value;
-  return Math.round(+$("tank").value * (1 - +$("gauge").value));
+  const q = $("qty").value;
+  if(q==="L") return +$("liters").value;
+  return Math.round(+$("tank").value * +q);
 }
 function updQ(){
-  const plein = qmode()==="plein";
-  $("pleinBox").style.display = plein?"":"none";
-  $("litresBox").style.display = plein?"none":"";
+  const lit = $("qty").value==="L";
+  $("tankBox").style.display = lit?"none":"";
+  $("litresBox").style.display = lit?"":"none";
   $("pleinOut").textContent = litersToBuy()>0 ? litersToBuy()+" L" : "–";
 }
-document.querySelectorAll('input[name=qmode]').forEach(r=>r.addEventListener("change",()=>{updQ();save();}));
-["tank","gauge","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>$(id).addEventListener("change",()=>{updQ();save();}));
+["qty","tank","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>{ $(id).addEventListener("change",()=>{updQ();save();}); $(id).addEventListener("input",updQ); });
 
 // ---------- préférences ----------
 function save(){ store.set("prefs2",{car:car?ENTRIES.indexOf(car):null,carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
-  qmode:qmode(),tank:$("tank").value,gauge:$("gauge").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
+  qty:$("qty").value,tank:$("tank").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
 fillFuels(Object.keys(FUELS));
 if(p){
@@ -148,8 +147,7 @@ if(p){
   if(p.car!=null && ENTRIES[p.car]) selectCar(ENTRIES[p.car]);
   if(p.fuel) fillFuels([...$("fuel").options].map(o=>o.value), p.fuel);
   if(p.conso) $("conso").value=p.conso;
-  if(p.qmode) document.querySelector(`input[name=qmode][value=${p.qmode}]`).checked=true;
-  ["tank","gauge","liters","radius"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
+  ["qty","tank","liters","radius"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
   $("roundtrip").checked = p.rt!==false;
   $("notoll").checked = !!p.nt;
 }
