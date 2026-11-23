@@ -1,0 +1,29 @@
+name: Mise à jour des enseignes
+
+on:
+  schedule:
+    - cron: "17 3 * * *"   # chaque nuit
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/build_brands.py
+      - .github/workflows/brands.yml
+
+permissions:
+  contents: write
+
+jobs:
+  brands:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/build_brands.py
+      - name: Enregistrer brands.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add brands.json
+          git diff --cached --quiet || (git commit -m "Mise à jour des enseignes" && git pull --rebase && git push)

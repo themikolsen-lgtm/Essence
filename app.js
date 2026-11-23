@@ -10,6 +10,7 @@ const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">
 const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[-_/+(),]/g," ").replace(/\s+/g," ").trim();
 const ROMAN = {i:"1",ii:"2",iii:"3",iv:"4",v:"5",vi:"6",vii:"7",viii:"8"};
 let origin = null, map = null, layer = null, car = null;
+const BRANDS = fetch("brands.json?d="+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():{}).catch(()=>({}));
 
 // ---------- recherche de voiture ----------
 const ENTRIES = [];
@@ -215,7 +216,7 @@ async function fetchStations(o, fuel, radius){
   const seen = new Set();
   return [...cheap,...near].filter(s=>!seen.has(s.id)&&seen.add(s.id)).map(s=>{
     const lat = s.geom?.lat ?? (+s.latitude/100000), lon = s.geom?.lon ?? (+s.longitude/100000);
-    return {id:s.id, adresse:s.adresse, ville:s.ville, cp:s.cp, lat, lon, price:+s[fuel+"_prix"], maj:s[fuel+"_maj"]};
+    return {id:String(s.id), adresse:s.adresse, ville:s.ville, cp:s.cp, lat, lon, price:+s[fuel+"_prix"], maj:s[fuel+"_maj"]};
   }).filter(s=>s.price>0 && isFinite(s.lat));
 }
 // Enseignes : OpenStreetMap (le flux officiel ne donne pas le nom de la station)
@@ -227,8 +228,8 @@ function cleanBrand(t){
 }
 async function addBrands(o, list){
   const q = `[out:json][timeout:25];(${list.map(s=>`nwr["amenity"="fuel"](around:300,${s.lat.toFixed(5)},${s.lon.toFixed(5)});`).join("")});out center tags;`;
-  for(const url of OVERPASS){
-    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 10000);
+  for(const url of OVERPASS.slice(0,1)){
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 6000);
     try{
       const r = await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrl.signal});
       if(!r.ok) continue;
@@ -245,7 +246,7 @@ async function addBrands(o, list){
 }
 async function roadDistances(o, list){
   const coords = [o,...list].map(p=>`${p.lon.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
-  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 8000);
+  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 5000);
   try{
     const r = await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`,{signal:ctrl.signal}).then(r=>r.json());
     if(r.code!=="Ok") return;
@@ -258,7 +259,7 @@ async function search(){
   const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0)) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save(); $("carHits").innerHTML="";
+  save(); $("carHits").innerHTML=""; render.done=false;
   try{
     if(!origin){
       const q=$("addr").value.trim();
@@ -271,16 +272,27 @@ async function search(){
     st.forEach(s=>{ s.km = haversine(origin,s)*1.3; s.min = s.km/50*60; s.road=false; });
     const est = s => s.price*(liters + (rt?2:1)*s.km*conso/100);
     st.sort((a,b)=>est(a)-est(b)); st = st.slice(0,40);
-    progress(65,"Distances par la route et enseignes…");
-    await Promise.all([roadDistances(origin, st), addBrands(origin, st)]);
-    st.forEach(s=>{
-      s.tripKm = (rt?2:1)*s.km;
-      s.tripCost = s.tripKm*conso/100*s.price;
-      s.total = liters*s.price + s.tripCost;
-    });
-    st.sort((a,b)=>a.total-b.total);
-    progress(95,"Calcul du plus rentable…");
-    render(st, {fuel,liters,rt});
+    // enseignes : liste pré-calculée (brands.json), instantané
+    const brands = await BRANDS;
+    st.forEach(s=>{ if(brands[s.id]) s.brand = brands[s.id]; });
+    const finish = () => {
+      st.forEach(s=>{
+        s.tripKm = (rt?2:1)*s.km;
+        s.tripCost = s.tripKm*conso/100*s.price;
+        s.total = liters*s.price + s.tripCost;
+      });
+      st.sort((a,b)=>a.total-b.total);
+      render(st, {fuel,liters,rt});
+    };
+    // 1) résultat immédiat avec distances estimées
+    progress(70,"Calcul du plus rentable…");
+    finish();
+    setStatus(`${st.length} stations comparées autour de ${origin.label}. Calcul des distances par la route…`);
+    // 2) affinage : distances réelles par la route (+ enseignes manquantes), sans bloquer l'affichage
+    progress(85,"Distances exactes par la route…");
+    const missing = st.filter(s=>!s.brand);
+    await Promise.all([roadDistances(origin, st), missing.length>3 && !Object.keys(brands).length ? addBrands(origin, missing) : null]);
+    finish();
     progress(100,"Terminé ✓");
     setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
   }catch(e){ progress(null); setStatus(e.message||"Une erreur est survenue.", true); }
@@ -308,7 +320,8 @@ function render(st, o){
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
   drawMap(st);
-  try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
+  if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
+  render.done = true;
 }
 function drawMap(st){
   if(typeof L==="undefined") return;
