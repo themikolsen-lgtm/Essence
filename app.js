@@ -728,7 +728,7 @@ const BASES = {
   ign:   {label:"IGN", srcs:[["https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",{maxZoom:19}],["https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}],["https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",{subdomains:"abc",maxZoom:19}]], attr:'© <a href="https://www.ign.fr">IGN</a> – Géoplateforme', cls:"night"},
   sat:   {label:"Photo", srcs:[["https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}",{maxZoom:19}],["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19}]], attr:'Photos aériennes © <a href="https://www.ign.fr">IGN</a>'}
 };
-const getBase = () => { try{ return BASES[localStorage.getItem("essence_base")] ? localStorage.getItem("essence_base") : "clair"; }catch(e){ return "clair"; } };
+const getBase = () => "sat";   // carte photo uniquement
 function setBase(key){
   if(!map) return;
   try{ localStorage.setItem("essence_base", key); }catch(e){}
@@ -774,7 +774,7 @@ function drawMap(st){
   if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
   if($("map").hidden) return;
   // fond de carte OpenStreetMap ; en mode sombre il est assombri par un filtre (voir #map.dark)
-  if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); addBaseSwitch(); }
+  if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); }
   if(!tiles) setBase(getBase());
   if(layer) layer.remove();
   layer = L.layerGroup().addTo(map);
