@@ -15,6 +15,10 @@ Application web qui trouve **la station la plus rentable** autour de vous, en te
 
 Les stations sont classées de la plus rentable à la moins rentable, avec une carte et un lien d'itinéraire.
 
+## Carnet de consommation
+
+L'onglet **Carnet** sert de cahier de suivi : on y note chaque plein (date, compteur, litres, prix, plein complet ou non). Il calcule la consommation réelle entre deux pleins complets, les dépenses par mois, le prix moyen du litre et le coût pour 100 km, et peut réutiliser la consommation réelle dans la recherche. Le bouton « Noter ce plein » préremplit le plein depuis la station trouvée. Les données restent sur l'appareil (export / import CSV pour les sauvegarder).
+
 ## Voiture électrique
 
 Si la voiture choisie est électrique, l'app cherche les **bornes de recharge** compatibles autour de vous, calcule le **temps de charge** (batterie, puissance de la borne et de la voiture, ralentissement au-delà de 80 %), affiche le prix quand l'opérateur le publie, et liste **ce qu'il y a à faire à côté** pendant la charge (cafés, restaurants, boulangeries, supermarchés, parcs, toilettes…).

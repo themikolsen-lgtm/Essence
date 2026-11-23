@@ -194,12 +194,52 @@ td[data-l="Station"]{overflow-wrap:anywhere}
   #more{padding:0 14px}
   .best .big{font-size:24px}
 }
+
+/* Onglets */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:640px;margin:10px auto 0;padding:4px;background:var(--field);border-radius:999px;width:calc(100% - 28px)}
+.tabs button{min-height:42px;border-radius:999px;background:transparent;color:var(--muted);font-weight:800}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+main[hidden]{display:none}
+.ch2{font-size:17px;margin:2px 4px 10px}
+.bestbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.logit{width:auto;min-height:44px;padding:0 18px;background:rgba(255,255,255,.2);color:#fff;font-weight:800}
+/* Carnet */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--bg);border-radius:20px;padding:10px 14px}
+.kpi b{display:block;font-size:22px;font-weight:800;line-height:1.15}
+.kpi span{font-size:12px;color:var(--muted);font-weight:600}
+.kpi.main b{color:var(--accent)}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:62px 1fr 72px;align-items:center;gap:8px;font-size:13px}
+.bar i{display:block;height:14px;border-radius:999px;background:var(--accent);min-width:4px}
+.bar span:last-child{text-align:right;font-weight:700}
+.entry{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 4px;border-top:1px solid var(--field)}
+.entry:first-child{border-top:0}
+.entry b{font-size:15px}
+.entry .r{text-align:right;font-weight:800}
+.entry .m{font-size:13px;color:var(--muted)}
+.entry .acts{grid-column:1/-1;display:flex;gap:6px}
+.entry .acts button{width:auto;min-height:36px;padding:0 12px;font-size:13px}
+.cons{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--green);color:#fff;font-size:12px;font-weight:800}
+.filebtn{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:999px;background:var(--field);font-weight:700;cursor:pointer}
+.filebtn input{position:absolute;opacity:0;width:1px;height:1px;min-height:0}
+.toast{border-radius:22px!important;position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:700;font-size:14px;display:flex;gap:12px;align-items:center;z-index:2000;max-width:calc(100% - 24px)}
+.toast button{width:auto;min-height:32px;padding:0 12px;background:var(--accent);color:#fff;font-size:13px}
+.toast[hidden]{display:none}
+.saverow{display:flex;gap:8px;margin-top:12px}
+.saverow button{flex:1}
+#tabLog .row.r3 input{padding-left:12px;padding-right:8px}
+#tabLog input[type=date]{padding-left:12px;padding-right:8px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <header><span class="logo">⛽</span><div><h1>Où faire le plein ?</h1><p>Le moins cher, trajet compris</p></div></header>
-<main>
+<nav class="tabs" role="tablist">
+  <button type="button" role="tab" id="tabBtnFind" aria-selected="true" aria-controls="tabFind">⛽ Trouver</button>
+  <button type="button" role="tab" id="tabBtnLog" aria-selected="false" aria-controls="tabLog">📒 Carnet</button>
+</nav>
+<main id="tabFind" role="tabpanel">
   <section class="card closed" id="carBox">
     <div class="sum">
       <span class="ic">🚗</span>
@@ -277,11 +317,61 @@ td[data-l="Station"]{overflow-wrap:anywhere}
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
   <p class="muted saved">✓ Vos réglages (voiture, quantité, rayon, adresse) sont enregistrés sur cet appareil, rien que pour vous. <button type="button" id="forget" class="linkish">Effacer mes réglages</button></p>
-  <p class="muted" style="text-align:center">Version 20261123q</p>
+  <p class="muted" style="text-align:center">Version 20261123r</p>
+</main>
+
+<main id="tabLog" role="tabpanel" hidden>
+  <section class="card">
+    <h2 class="ch2">Cahier de suivi de consommation</h2>
+    <div class="kpis" id="kpis"></div>
+    <p class="muted" id="kpiNote" style="margin:8px 4px 0"></p>
+    <button type="button" class="ghost" id="useReal" style="margin-top:10px;display:none"></button>
+  </section>
+
+  <section class="card" id="logFormCard">
+    <h2 class="ch2" id="logFormTitle">Ajouter un plein</h2>
+    <form id="logForm" autocomplete="off">
+      <div class="row r2">
+        <div><label class="lbl" for="lDate">Date</label><input id="lDate" type="date" required></div>
+        <div><label class="lbl" for="lKm">Compteur (km)</label><input id="lKm" type="number" inputmode="numeric" min="0" step="1" placeholder="ex. 84 250"></div>
+      </div>
+      <div class="row r3">
+        <div><label class="lbl" for="lL">Litres</label><input id="lL" type="number" inputmode="decimal" min="0" step="0.01" required placeholder="41,2"></div>
+        <div><label class="lbl" for="lP">Prix / L</label><input id="lP" type="number" inputmode="decimal" min="0" step="0.001" placeholder="1,749"></div>
+        <div><label class="lbl" for="lT">Total €</label><input id="lT" type="number" inputmode="decimal" min="0" step="0.01" placeholder="72,06"></div>
+      </div>
+      <div class="row r2">
+        <div><label class="lbl" for="lSt">Station (facultatif)</label><input id="lSt" type="text" placeholder="ex. E.Leclerc Arnas"></div>
+        <div><span class="lbl">&nbsp;</span><label class="chip"><input type="checkbox" id="lFull" checked>Plein complet</label></div>
+      </div>
+      <div class="saverow">
+        <button type="submit" class="primary" id="lSave">Enregistrer le plein</button>
+        <button type="button" id="lCancel" hidden>Annuler</button>
+      </div>
+      <p class="muted" style="margin:8px 4px 0">Notez le compteur et cochez « Plein complet » pour calculer votre consommation réelle (entre deux pleins complets).</p>
+    </form>
+  </section>
+
+  <section class="card" id="monthsCard" hidden>
+    <h2 class="ch2">Dépenses par mois</h2>
+    <div id="months" class="bars"></div>
+  </section>
+
+  <section class="card" id="histCard" hidden>
+    <h2 class="ch2">Historique</h2>
+    <div id="hist"></div>
+    <div class="row r2" style="margin-top:12px">
+      <button type="button" id="lExport">⬇️ Exporter (CSV)</button>
+      <label class="filebtn">⬆️ Importer<input type="file" id="lImport" accept=".csv,text/csv"></label>
+    </div>
+  </section>
+  <p class="muted saved">✓ Votre carnet est enregistré sur cet appareil. Exportez-le de temps en temps pour le garder en sécurité.</p>
+  <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123q"></script>
-<script src="app.js?v=20261123q"></script>
+<script src="cars.js?v=20261123r"></script>
+<script src="app.js?v=20261123r"></script>
+<script src="carnet.js?v=20261123r"></script>
 </body>
 </html>

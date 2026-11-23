@@ -89,6 +89,7 @@ function selectCar(e, closeList=true){
   save();
 }
 const isEV = () => $("fuel").value==="elec";
+window.ESSENCE_SET_CONSO = v => { $("conso").value = v; updSummary(); save(); };
 const AVG = {gazole:5.5,e10:6.5,sp95:6.5,sp98:6.8,e85:8.0,gplc:8.0,elec:17};
 function noCarDefaults(){
   if(car) return;
@@ -463,7 +464,9 @@ function render(st, o){
     <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €${best.tollCost>0?` + péage ~${fmt(best.tollCost)} €`:""}</div>
     <div style="margin:10px 0 14px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(nearest.total-best.total)} €</b> par rapport à la plus proche (${esc(sName(nearest))}, ${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
     Jusqu'à <b>${fmt(worst.total-best.total)} €</b> d'écart avec la pire option.</div>
-    <a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire  ›</a>`;
+    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire  ›</a><button type="button" class="logit" id="logBest">📒 Noter ce plein</button></div>`;
+  window.ESSENCE_LAST = {station:`${sName(best)}, ${best.ville||""}`, price:best.price, liters:o.liters, fuel:FUELS[o.fuel]};
+  $("logBest").onclick = () => window.CARNET?.prefill(window.ESSENCE_LAST);
   $("resultsPanel").style.display="block";
   $("resTitle").textContent = "Toutes les stations";
   $("evSort").nextElementSibling.style.display = "none";
