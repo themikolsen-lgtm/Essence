@@ -64,9 +64,33 @@ function selectCar(e, closeList=true){
     <div class="muted">Consommation moyenne réelle en usage mixte. Corrigez-la plus bas si vous connaissez la vôtre.</div>`;
   fillFuels(FUEL_KEYS[e.fuel]);
   $("conso").value = e.conso;
-  if(closeList) $("carHits").innerHTML="";
+  updSummary();
+  if(closeList){ $("carHits").innerHTML=""; setCarOpen(false); }
   save();
 }
+// bandeau voiture : replié une fois la voiture choisie
+function updSummary(){
+  $("sumName").textContent = car && car.fuel!=="x" ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : "Ma voiture";
+  const c = +$("conso").value;
+  $("sumInfo").textContent = `${FUELS[$("fuel").value]||""}${c>0?" · "+fmt(c,1)+" L/100 km":""}`;
+}
+function setCarOpen(open){
+  if(!open && !(+$("conso").value>0)) open = true;
+  $("carBox").classList.toggle("closed", !open);
+  if(open) setTimeout(()=>{ try{ $("carq").focus(); }catch(e){} }, 50);
+}
+$("carEditBtn").addEventListener("click", ()=>setCarOpen(true));
+$("carOk").addEventListener("click", ()=>{
+  if(!(+$("conso").value>0)) return setStatus("Tapez votre voiture ou indiquez sa consommation.", true);
+  setStatus(""); updSummary(); $("carHits").innerHTML=""; setCarOpen(false); save();
+});
+$("carq").addEventListener("keydown", ev=>{
+  if(ev.key!=="Enter") return;
+  ev.preventDefault();
+  const first = searchCars($("carq").value)[0];
+  if(first) selectCar(first);
+});
+["fuel","conso"].forEach(id=>$(id).addEventListener("input", updSummary));
 function fillFuels(keys, keep){
   const prev = keep || $("fuel").value;
   $("fuel").innerHTML = keys.map(k=>`<option value="${k}">${FUELS[k]}</option>`).join("");
@@ -106,7 +130,8 @@ if(p){
   $("roundtrip").checked = p.rt!==false;
   $("notoll").checked = !!p.nt;
 }
-updQ();
+updQ(); updSummary();
+$("carBox").classList.toggle("closed", +$("conso").value>0);
 
 let pTimer;
 function progress(pct, txt){
@@ -275,7 +300,7 @@ async function search(){
   const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked, noToll=$("notoll").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0)) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save(); $("carHits").innerHTML=""; render.done=false;
+  save(); $("carHits").innerHTML=""; render.done=false; $("carBox").classList.add("closed"); updSummary();
   try{
     if(!origin){
       const q=$("addr").value.trim();

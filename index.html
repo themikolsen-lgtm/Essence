@@ -11,128 +11,153 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1116);--ink:light-dark(#111,#eef1f5);--muted:light-dark(#5b6270,#9aa3b2);--line:light-dark(#e4e7ec,#252b36);--card:light-dark(#f6f7f9,#161b23);--red:#e6261f;--blue:#0a5cff;--amber:#ffb400;--green:#00a05a}
+:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1116);--ink:light-dark(#111,#eef1f5);--muted:light-dark(#5b6270,#9aa3b2);--line:light-dark(#e4e7ec,#252b36);--card:light-dark(#f4f5f7,#161b23);--red:#e6261f;--blue:#0a5cff;--amber:#ffb400;--green:#00a05a}
 *{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif}
-header{background:var(--red);color:#fff;padding:20px max(5vw,16px)}
-header h1{margin:0;font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.05}
-header p{margin:6px 0 0;opacity:.9}
-main{max-width:1100px;margin:0 auto;padding:20px max(4vw,16px) 60px;display:grid;gap:20px}
-.panel{background:var(--card);border-radius:14px;padding:18px}
-.panel h2{margin:0 0 12px;font-size:19px}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
-input,select,button{font:inherit;font-size:16px;min-height:44px;border-radius:10px;border:1px solid var(--line);padding:8px 12px;background:var(--bg);color:var(--ink);width:100%}
-input:focus,select:focus,button:focus{outline:3px solid var(--blue);outline-offset:1px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Figtree,system-ui,sans-serif}
+header{background:var(--red);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top))}
+header h1{margin:0;font-size:20px;font-weight:800;line-height:1.2}
+main{max-width:640px;margin:0 auto;padding:10px 12px 40px;display:grid;gap:10px}
+.card{background:var(--card);border-radius:14px;padding:10px 12px}
+.lbl{display:block;font-size:12px;color:var(--muted);margin:0 0 3px}
+input,select,button{font:inherit;font-size:16px;min-height:44px;border-radius:10px;border:1px solid var(--line);padding:6px 10px;background:var(--bg);color:var(--ink);width:100%}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
 button{cursor:pointer;font-weight:600}
 .primary{background:var(--blue);color:#fff;border:0}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
-.row>*{flex:1 1 200px}
-.check{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px}
-.check input{width:22px;min-height:22px}
-.hits{display:grid;gap:6px;margin-top:8px}
-.hits button{text-align:left;font-weight:400;min-height:44px}
+.muted{color:var(--muted);font-size:13px}
+
+/* voiture : résumé replié */
+.sum{display:none;align-items:center;gap:10px}
+.sum .ic{font-size:24px;line-height:1}
+.sumtxt{flex:1;line-height:1.25}
+.sumtxt b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghost{width:auto;background:transparent;color:var(--blue);border:1px solid var(--line);padding:6px 12px;font-size:15px}
+#carBox.closed .sum{display:flex}
+#carBox.closed #carEdit{display:none}
+#carCard{display:none!important}
+.hits{display:grid;gap:4px;margin-top:6px}
+.hits:empty{display:none}
+.hits button{text-align:left;font-weight:400;font-size:15px;min-height:44px;padding:6px 10px}
 .hits button b{font-weight:700}
-.carcard{display:none;margin-top:12px;border-left:6px solid var(--blue);background:var(--bg);border-radius:10px;padding:12px 14px}
-.carcard .nm{font-size:20px;font-weight:800;line-height:1.2}
-.carcard .cs{font-size:30px;font-weight:800;color:var(--blue);line-height:1.1;margin-top:4px}
-.seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.seg label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--ink);font-size:16px;margin:0;cursor:pointer;background:var(--bg)}
-.seg input{width:20px;min-height:20px}
-.out{font-size:24px;font-weight:800;min-height:44px;display:flex;align-items:center}
-#status{color:var(--muted);min-height:1.5em}
-.prog{display:none;margin-top:12px}.prog.on{display:block}
-.ptxt{font-size:14px;color:var(--muted);margin-bottom:6px}
-.ptrack{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
-.pbar{height:100%;width:0;background:var(--blue);border-radius:5px;transition:width .5s ease;position:relative;overflow:hidden}
+.hits p{margin:4px 2px}
+.row{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(0,1fr));align-items:end;margin-top:8px}
+.row.r3{grid-template-columns:1fr 1fr 0.8fr}
+
+/* quantité */
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.seg label{display:flex;justify-content:center;align-items:center;min-height:40px;font-size:15px;font-weight:600;cursor:pointer;margin:0}
+.seg input{position:absolute;opacity:0;pointer-events:none;width:0;min-height:0}
+.seg label:has(input:checked){background:var(--blue);color:#fff}
+.out{font-size:22px;font-weight:800;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+
+/* position */
+.addrrow{display:grid;grid-template-columns:1fr 52px;gap:8px}
+#geo{padding:0;font-size:22px}
+.chips{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:8px}
+.chips select{width:auto;padding-right:6px}
+.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 8px;min-height:44px;font-size:14px;background:var(--bg);cursor:pointer;line-height:1.15}
+.chip input{width:18px;min-height:18px;flex:none;margin:0}
+
+#go{min-height:52px;font-size:17px;border-radius:12px}
+#status{color:var(--muted);min-height:0;margin:0;font-size:14px}
+#status:empty{display:none}
+#status.err{color:var(--red)}
+.prog{display:none}.prog.on{display:block}
+.ptxt{font-size:13px;color:var(--muted);margin-bottom:4px}
+.ptrack{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.pbar{height:100%;width:0;background:var(--blue);border-radius:4px;transition:width .5s ease;position:relative;overflow:hidden}
 .pbar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 1.2s linear infinite}
 @keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .spin{display:none;width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;animation:rot .8s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes rot{to{transform:rotate(360deg)}}
 #go.busy .spin{display:inline-block}#go.busy{opacity:.85}
-.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.meta .toll{border-color:var(--amber);background:light-dark(#fff6dc,#3a2e00)}
-.meta span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:13px;white-space:nowrap}
-.geohelp{display:none;margin-top:10px;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:15px}
+.geohelp{display:none;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:14px}
 .geohelp.on{display:block}.geohelp ol{margin:6px 0 0;padding-left:20px}.geohelp li{margin:3px 0}
-#status.err{color:var(--red)}
-.best{background:var(--green);color:#fff;border-radius:14px;padding:18px;display:none}
-.best .big{font-size:clamp(28px,6vw,44px);font-weight:800;line-height:1.1}
-.best a{color:#fff}
-#map{height:380px;border-radius:14px;display:none}
+
+/* résultats */
+.best{background:var(--green);color:#fff;border-radius:14px;padding:14px;display:none;scroll-margin-top:8px;font-size:15px}
+.best .big{font-size:clamp(24px,7vw,36px);font-weight:800;line-height:1.1}
+.best a{color:#fff;font-weight:700}
+#map{height:260px;border-radius:14px;display:none}
+#resultsPanel h2{font-size:16px;margin:0 0 6px}
 table{width:100%;border-collapse:collapse;font-size:15px}
 th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 td.n,th.n{text-align:right;white-space:nowrap}
 tr.top td{background:light-dark(#e6f6ee,#10281c)}
-.muted{color:var(--muted);font-size:13px}
-@media(max-width:640px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:2px 0;text-align:left}.stack td::before{content:attr(data-l)" : ";color:var(--muted)}.stack td[data-l="Station"]::before,.stack td[data-l="Rang"]::before{content:none}.stack td[data-l="Rang"]{font-weight:800}}
+.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.meta .toll{border-color:var(--amber);background:light-dark(#fff6dc,#3a2e00)}
+.meta span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:1px 7px;font-size:13px;white-space:nowrap}
+@media(max-width:640px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;grid-template-columns:26px 1fr auto;column-gap:8px;padding:8px 4px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:0}.stack td[data-l="Rang"]{grid-row:1/3;font-weight:800}.stack td[data-l="Station"]{grid-row:1/3}.stack td[data-l="Coût total"]{grid-column:3}.stack td[data-l="Écart"]{grid-column:3;color:var(--muted);font-size:13px}}
+@media(max-width:360px){.chips{grid-template-columns:1fr 1fr}.chips select{grid-column:1/-1;width:100%}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header>
-  <h1>Où faire le plein ?</h1>
-  <p>Le prix affiché ne suffit pas : on compte aussi le carburant brûlé pour aller à la station.</p>
-</header>
+<header><h1>⛽ Où faire le plein ?</h1></header>
 <main>
-  <section class="panel">
-    <h2>1. Votre voiture</h2>
-    <label for="carq">Tapez votre voiture : marque, modèle, motorisation, année</label>
-    <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016  ·  208 puretech 2020  ·  golf 7 tdi" autocomplete="off">
-    <div id="carHits" class="hits"></div>
-    <div id="carCard" class="carcard"></div>
-    <div class="grid" style="margin-top:12px">
-      <div><label for="fuel">Carburant</label><select id="fuel"></select></div>
-      <div><label for="conso">Consommation (L/100 km) – modifiable</label><input id="conso" type="number" step="0.1" min="2" max="30"></div>
+  <section class="card closed" id="carBox">
+    <div class="sum">
+      <span class="ic">🚗</span>
+      <div class="sumtxt"><b id="sumName">Votre voiture</b><span class="muted" id="sumInfo"></span></div>
+      <button type="button" class="ghost" id="carEditBtn">Modifier</button>
+    </div>
+    <div id="carEdit">
+      <label class="lbl" for="carq">Votre voiture : marque, modèle, moteur, année</label>
+      <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016" autocomplete="off" enterkeyhint="done">
+      <div id="carHits" class="hits"></div>
+      <div id="carCard"></div>
+      <div class="row">
+        <div><label class="lbl" for="fuel">Carburant</label><select id="fuel"></select></div>
+        <div><label class="lbl" for="conso">Conso (L/100 km)</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
+        <div><button type="button" class="primary" id="carOk">Valider</button></div>
+      </div>
     </div>
   </section>
 
-  <section class="panel">
-    <h2>Combien de carburant ?</h2>
+  <section class="card">
     <div class="seg" role="radiogroup">
-      <label><input type="radio" name="qmode" value="plein" checked> Faire le plein</label>
-      <label><input type="radio" name="qmode" value="litres"> Saisir les litres</label>
+      <label><input type="radio" name="qmode" value="plein" checked>Faire le plein</label>
+      <label><input type="radio" name="qmode" value="litres">Saisir les litres</label>
     </div>
-    <div class="grid" id="pleinBox">
-      <div><label for="tank">Taille du réservoir (L)</label><input id="tank" type="number" step="1" min="20" max="120" value="45"></div>
-      <div><label for="gauge">Niveau actuel de la jauge</label><select id="gauge"><option value="0">Réserve (vide)</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select></div>
-      <div><label>Litres à mettre</label><div class="out" id="pleinOut">–</div></div>
+    <div class="row r3" id="pleinBox">
+      <div><label class="lbl" for="tank">Réservoir (L)</label><input id="tank" type="number" inputmode="numeric" step="1" min="20" max="120" value="45"></div>
+      <div><label class="lbl" for="gauge">Jauge</label><select id="gauge"><option value="0">Réserve</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select></div>
+      <div><span class="lbl">À mettre</span><div class="out" id="pleinOut">–</div></div>
     </div>
-    <div class="grid" id="litresBox" style="display:none">
-      <div><label for="liters">Litres à mettre</label><input id="liters" type="number" step="1" min="1" max="150" value="30"></div>
+    <div class="row" id="litresBox" style="display:none">
+      <div><label class="lbl" for="liters">Litres à mettre</label><input id="liters" type="number" inputmode="numeric" step="1" min="1" max="150" value="30"></div>
     </div>
   </section>
 
-  <section class="panel">
-    <h2>2. Où êtes-vous ?</h2>
-    <div class="row">
-      <div><label for="addr">Adresse</label><input id="addr" list="addrList" placeholder="ex. 12 rue de la Paix, Lyon" autocomplete="off"><datalist id="addrList"></datalist></div>
-      <div style="flex:0 1 140px"><label for="radius">Rayon (km)</label><select id="radius"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>30</option><option>50</option><option>75</option><option>100</option></select></div>
+  <section class="card">
+    <div class="addrrow">
+      <input id="addr" list="addrList" placeholder="Adresse ou ville" autocomplete="off" enterkeyhint="search" aria-label="Adresse"><datalist id="addrList"></datalist>
+      <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle">📍</button>
     </div>
-    <div class="row" style="margin-top:12px">
-      <button id="geo">📍 Ma position actuelle</button>
-      <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
+    <div class="chips">
+      <select id="radius" aria-label="Rayon"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="15">15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
+      <label class="chip"><input type="checkbox" id="roundtrip" checked>Aller-retour</label>
+      <label class="chip"><input type="checkbox" id="notoll">Sans péage</label>
     </div>
-    <p style="margin:12px 0 0"><label class="check"><input type="checkbox" id="roundtrip" checked> Compter l'aller-retour (je reviens ensuite à mon point de départ)</label></p>
-    <p style="margin:8px 0 0"><label class="check"><input type="checkbox" id="notoll"> Éviter les autoroutes à péage</label></p>
-    <p class="muted" style="margin:4px 0 0">Sinon, le péage est ajouté au coût (estimation 0,11 €/km sur les portions payantes, voiture classe 1).</p>
-    <div id="prog" class="prog"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
-    <p id="status"></p>
-    <div id="geohelp" class="geohelp"></div>
   </section>
+
+  <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
+  <div id="prog" class="prog"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
+  <p id="status"></p>
+  <div id="geohelp" class="geohelp"></div>
 
   <section class="best" id="best"></section>
   <div id="map"></div>
 
-  <section class="panel" id="resultsPanel" style="display:none">
-    <h2>Toutes les stations, de la plus rentable à la moins rentable</h2>
+  <section class="card" id="resultsPanel" style="display:none">
+    <h2>Toutes les stations</h2>
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
-    <p class="muted">Coût total = litres à mettre × prix + carburant consommé pour le trajet × prix + péage éventuel. Distances par la route (OSRM) quand c'est possible, sinon estimées à vol d'oiseau × 1,3. Prix : flux officiel prix-carburants.gouv.fr.</p>
+    <p class="muted">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123c</p>
+  <p class="muted" style="text-align:center">Version 20261123d</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123c"></script>
-<script src="app.js?v=20261123c"></script>
+<script src="cars.js?v=20261123d"></script>
+<script src="app.js?v=20261123d"></script>
 </body>
 </html>
