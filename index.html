@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Essence – le plein le plus rentable</title>
+<script>
+/* mise à jour automatique : si une version plus récente est en ligne, on recharge sans le cache */
+window.APP_V="202611231624";
+(function(){try{
+  fetch("version.txt?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():null}).then(function(v){
+    v=(v||"").trim(); if(!v||v===window.APP_V) return;
+    var k="essence_reload_"+v; if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,"1");
+    location.replace(location.pathname+"?v="+v+location.hash);
+  }).catch(function(){});
+}catch(e){}})();
+</script>
+
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
@@ -524,6 +536,12 @@ tr.top .racts button{background:#fff;color:#14181f}
 .racts{display:grid;grid-template-columns:1fr 1fr;margin-top:10px}
 .racts button,.racts a{justify-content:center;width:100%}
 .racts a,td[data-l="Station"] .racts a{color:var(--bg)!important}
+.av{background:var(--ink)!important;color:var(--bg)}
+.av .i{width:55%;height:55%}
+.best .av{background:#fff!important;color:var(--green)}
+.pinw .av{background:var(--field)!important;color:#14181f}
+.pinw.best .av{background:#fff!important;color:var(--green)}
+tr.top td[data-l="Rang"] .av{background:var(--green)!important;color:#fff}
 [hidden]{display:none!important}
 
 /* Repères de la carte */
@@ -664,7 +682,7 @@ tr.top .racts button{background:#fff;color:#14181f}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231620</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231624</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -722,10 +740,10 @@ tr.top .racts button{background:#fff;color:#14181f}
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611231620"></script>
-<script src="app.js?v=202611231620"></script>
-<script src="carnet.js?v=202611231620"></script>
-<script src="firebase-config.js?v=202611231620"></script>
-<script type="module" src="compte.js?v=202611231620"></script>
+<script src="cars.js?v=202611231624"></script>
+<script src="app.js?v=202611231624"></script>
+<script src="carnet.js?v=202611231624"></script>
+<script src="firebase-config.js?v=202611231624"></script>
+<script type="module" src="compte.js?v=202611231624"></script>
 </body>
 </html>

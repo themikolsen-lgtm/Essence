@@ -23,18 +23,10 @@ function pillify(sel){
 document.querySelectorAll("select[data-pills]").forEach(pillify);
 
 const ICON = {pump:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg>`,bolt:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`,car:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17H4a1 1 0 0 1-1-1v-3.5l2.2-5.3A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1.2L21 12.5V16a1 1 0 0 1-1 1h-1"/><path d="M3.5 12.5h17"/><circle cx="7.5" cy="17" r="2"/><circle cx="16.5" cy="17" r="2"/><path d="M9.5 17h5"/></svg>`,pin:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>`,nav:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 21 3l-8 18-2-8z"/></svg>`,plus:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`,coffee:`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2.5v2.5M12 2.5v2.5"/></svg>`};
-// pastille d'enseigne : couleur de la marque (approchée) + initiales
-const BRAND_COL = [[/total/i,"#e2231a"],[/leclerc/i,"#0062ae"],[/intermarch/i,"#e30613"],[/carrefour/i,"#1e4b9b"],[/auchan/i,"#d6001c"],
-  [/(syst[eè]me|super|hyper) u\b|^u\b|u express/i,"#e3000f"],[/esso/i,"#c8102e"],[/\bbp\b/i,"#009a3d"],[/shell/i,"#e5b300"],[/avia/i,"#d71920"],
-  [/agip|eni/i,"#f2b600"],[/casino/i,"#00843d"],[/netto/i,"#e3a300"],[/dyneff/i,"#f37021"],[/elf/i,"#0055a4"],[/lidl/i,"#0050aa"],
-  [/ionity/i,"#1a1a1a"],[/tesla/i,"#cc0000"],[/izivia/i,"#00a3e0"],[/fastned/i,"#f0c400"],[/electra/i,"#1c1c4c"]];
+
 function avatar(name){
-  const n = String(name||"").replace(/^station\s+/i,"").trim() || "?";
-  const hit = BRAND_COL.find(([re])=>re.test(n));
-  let col = hit ? hit[1] : `hsl(${[...n].reduce((h,c)=>h*31+c.charCodeAt(0)>>>0,7)%360} 55% 42%)`;
-  const words = n.replace(/[^\p{L}\p{N} ]/gu," ").split(/\s+/).filter(Boolean);
-  const ini = (words.length>1 ? words[0][0]+words[1][0] : n.slice(0,2)).toUpperCase();
-  return `<span class="av" style="background:${col}">${esc(ini)}</span>`;
+  // pastille neutre : icône de pompe (ou éclair pour les bornes), sans logo ni initiales
+  return `<span class="av">${isEV() ? ICON.bolt : ICON.pump}</span>`;
 }
 const FUELS = {gazole:"Gazole",e10:"SP95-E10",sp95:"SP95",sp98:"SP98",e85:"E85 (bioéthanol)",gplc:"GPL",elec:"Électrique"};
 const FUEL_NAME = {e:"Essence",d:"Diesel",h:"Hybride essence",g:"GPL / essence",x:"Électrique"};
