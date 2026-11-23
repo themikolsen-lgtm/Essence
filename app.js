@@ -188,22 +188,27 @@ function geoHelp(kind){
   $("geohelp").classList.add("on");
 }
 const getPos = opts => new Promise((ok,ko)=>navigator.geolocation.getCurrentPosition(ok,ko,opts));
-async function locate(){
+async function locate(auto){
   $("geohelp").classList.remove("on");
-  if(!window.isSecureContext) return geoHelp("insecure");
-  if(!navigator.geolocation) return geoHelp("unavailable");
-  setStatus(""); progress(5,"Localisation en cours… (acceptez la demande si le téléphone la propose)");
+  // en automatique : pas de gros message d'aide, juste une indication
+  const fail = kind => { progress(null); if(auto){ setStatus(kind==="denied" ? "Localisation non autorisée : tapez une adresse, ou touchez 📍 pour voir comment l'activer." : "Position introuvable : tapez une adresse ou touchez 📍.", false); } else geoHelp(kind); };
+  if(!window.isSecureContext) return auto ? null : geoHelp("insecure");
+  if(!navigator.geolocation) return fail("unavailable");
+  if(auto && navigator.permissions?.query){
+    try{ const st = await navigator.permissions.query({name:"geolocation"}); if(st.state==="denied") return fail("denied"); }catch(e){}
+  }
+  setStatus(""); progress(5,"Localisation automatique… (acceptez la demande si le téléphone la propose)");
   let pos;
   try{
     // 1) position rapide (wifi / réseau), acceptée jusqu'à 10 min d'ancienneté
     pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
   }catch(e){
-    if(e.code===1){ progress(null); return geoHelp("denied"); }
+    if(e.code===1) return fail("denied");
     try{
       // 2) GPS précis, plus lent
       progress(8,"Recherche du signal GPS…");
       pos = await getPos({enableHighAccuracy:true, timeout:25000, maximumAge:0});
-    }catch(e2){ progress(null); return geoHelp(e2.code===1?"denied":"unavailable"); }
+    }catch(e2){ return fail(e2.code===1?"denied":"unavailable"); }
   }
   origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"};
   try{
@@ -212,9 +217,12 @@ async function locate(){
     if(lbl){ origin.label = lbl; $("addr").value = "📍 "+lbl; }
     else $("addr").value = "📍 Ma position";
   }catch(e){ $("addr").value = "📍 Ma position"; }
+  if(auto && !(+$("conso").value>0)){ progress(null); setStatus("Position trouvée. Choisissez votre voiture puis lancez la recherche."); return; }
   search();
 }
-$("geo").addEventListener("click", locate);
+$("geo").addEventListener("click", ()=>locate(false));
+// localisation automatique à l'ouverture
+if(!$("addr").value.trim()) locate(true);
 // si l'utilisateur modifie le champ, on oublie la position GPS
 $("addr").addEventListener("focus", ()=>{ if($("addr").value.startsWith("📍")){ $("addr").value=""; origin=null; } });
 $("go").addEventListener("click", search);

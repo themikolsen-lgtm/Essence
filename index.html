@@ -7,92 +7,127 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#e6261f">
+<meta name="theme-color" content="#e6ebf1" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#262a31" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1116);--ink:light-dark(#111,#eef1f5);--muted:light-dark(#5b6270,#9aa3b2);--line:light-dark(#e4e7ec,#252b36);--card:light-dark(#f4f5f7,#161b23);--red:#e6261f;--blue:#0a5cff;--amber:#ffb400;--green:#00a05a}
-*{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Figtree,system-ui,sans-serif}
-header{background:var(--red);color:#fff;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top))}
-header h1{margin:0;font-size:20px;font-weight:800;line-height:1.2}
-main{max-width:640px;margin:0 auto;padding:10px 12px 40px;display:grid;gap:10px}
-.card{background:var(--card);border-radius:14px;padding:10px 12px}
-.lbl{display:block;font-size:12px;color:var(--muted);margin:0 0 3px}
-input,select,button{font:inherit;font-size:16px;min-height:44px;border-radius:10px;border:1px solid var(--line);padding:6px 10px;background:var(--bg);color:var(--ink);width:100%}
-input:focus,select:focus,button:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
-button{cursor:pointer;font-weight:600}
-.primary{background:var(--blue);color:#fff;border:0}
+/* Neumorphism : une seule matière, relief par ombres claires (haut-gauche) et sombres (bas-droite) */
+:root{color-scheme:light dark;
+  --base:light-dark(#e6ebf1,#262a31);--ink:light-dark(#2e3440,#e8ecf2);--muted:light-dark(#7b8494,#9aa3b2);
+  --hi:light-dark(rgba(255,255,255,.95),rgba(255,255,255,.06));--lo:light-dark(rgba(163,177,198,.65),rgba(0,0,0,.55));
+  --out:6px 6px 14px var(--lo),-6px -6px 14px var(--hi);
+  --out-sm:3px 3px 7px var(--lo),-3px -3px 7px var(--hi);
+  --in:inset 4px 4px 9px var(--lo),inset -4px -4px 9px var(--hi);
+  --in-sm:inset 2px 2px 5px var(--lo),inset -2px -2px 5px var(--hi);
+  --accent:#ff6a2b;--accent2:#ff3d54;--green:#1fb26b;--amber:#f5a623;--red:#e5484d;--blue:#3d7bff}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--base)}
+body{margin:0;background:var(--base);color:var(--ink);font:16px/1.4 "Plus Jakarta Sans",Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+header{padding:14px 16px 4px;padding-top:max(14px,env(safe-area-inset-top));max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px}
+header .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:var(--base);box-shadow:var(--out-sm);flex:none}
+header h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{max-width:640px;margin:0 auto;padding:12px 16px 40px;display:grid;gap:16px}
+.card{background:var(--base);border-radius:22px;padding:14px;box-shadow:var(--out)}
+.lbl{display:block;font-size:12px;color:var(--muted);margin:0 0 5px 4px;font-weight:600}
+input,select{font:inherit;font-size:16px;min-height:46px;border-radius:14px;border:0;padding:6px 12px;background:var(--base);color:var(--ink);width:100%;box-shadow:var(--in-sm);-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 52%,calc(100% - 11px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:26px}
+input::placeholder{color:var(--muted)}
+input:focus,select:focus{outline:none;box-shadow:var(--in-sm),0 0 0 2px var(--accent)}
+button{font:inherit;font-size:16px;min-height:46px;border-radius:14px;border:0;padding:6px 14px;background:var(--base);color:var(--ink);width:100%;cursor:pointer;font-weight:700;box-shadow:var(--out-sm);transition:box-shadow .15s,transform .15s}
+button:active{box-shadow:var(--in-sm);transform:scale(.99)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.primary{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi),inset 1px 1px 1px rgba(255,255,255,.35)}
+.primary:active{box-shadow:inset 3px 3px 7px rgba(0,0,0,.25),inset -2px -2px 5px rgba(255,255,255,.2)}
 .muted{color:var(--muted);font-size:13px}
 
-/* voiture : résumé replié */
-.sum{display:none;align-items:center;gap:10px}
-.sum .ic{font-size:24px;line-height:1}
-.sumtxt{flex:1;line-height:1.25}
+/* voiture */
+.sum{display:none;align-items:center;gap:12px}
+.sum .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;box-shadow:var(--in-sm);flex:none}
+.sumtxt{flex:1;line-height:1.3}
 .sumtxt b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ghost{width:auto;background:transparent;color:var(--blue);border:1px solid var(--line);padding:6px 12px;font-size:15px}
+.ghost{width:auto;color:var(--accent);padding:6px 14px;font-size:15px}
 #carBox.closed .sum{display:flex}
 #carBox.closed #carEdit{display:none}
 #carCard{display:none!important}
-.hits{display:grid;gap:4px;margin-top:6px}
+.hits{display:grid;gap:8px;margin-top:10px}
 .hits:empty{display:none}
-.hits button{text-align:left;font-weight:400;font-size:15px;min-height:44px;padding:6px 10px}
-.hits button b{font-weight:700}
-.hits p{margin:4px 2px}
-.row{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(0,1fr));align-items:end;margin-top:8px}
-.row.r3{grid-template-columns:1fr 1fr 0.8fr}
+.hits button{text-align:left;font-weight:500;font-size:15px;padding:8px 12px}
+.hits button b{font-weight:800}
+.hits p{margin:4px}
+.row{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(0,1fr));align-items:end;margin-top:12px}
+.row.r3{grid-template-columns:1fr 1fr .85fr}
 
-/* quantité */
-.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
-.seg label{display:flex;justify-content:center;align-items:center;min-height:40px;font-size:15px;font-weight:600;cursor:pointer;margin:0}
+/* quantité : interrupteur segmenté creusé */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;border-radius:16px;box-shadow:var(--in)}
+.seg label{display:flex;justify-content:center;align-items:center;min-height:40px;font-size:15px;font-weight:700;cursor:pointer;margin:0;border-radius:12px;color:var(--muted);transition:all .2s}
 .seg input{position:absolute;opacity:0;pointer-events:none;width:0;min-height:0}
-.seg label:has(input:checked){background:var(--blue);color:#fff}
-.out{font-size:22px;font-weight:800;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.seg label:has(input:checked){background:var(--base);color:var(--ink);box-shadow:var(--out-sm)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent)}
+.out{font-size:22px;font-weight:800;min-height:46px;display:flex;align-items:center;justify-content:center;border-radius:14px;color:var(--accent);box-shadow:var(--out-sm)}
 
 /* position */
-.addrrow{display:grid;grid-template-columns:1fr 52px;gap:8px}
-#geo{padding:0;font-size:22px}
-.chips{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:8px}
-.chips select{width:auto;padding-right:6px}
-.chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 8px;min-height:44px;font-size:14px;background:var(--bg);cursor:pointer;line-height:1.15}
-.chip input{width:18px;min-height:18px;flex:none;margin:0}
+.addrrow{display:grid;grid-template-columns:1fr 52px;gap:10px}
+#geo{padding:0;font-size:22px;border-radius:14px}
+.chips{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px;margin-top:12px}
+.chips select{width:auto}
+.chip{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:4px 10px;min-height:46px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.15;box-shadow:var(--out-sm);color:var(--muted);transition:all .2s}
+.chip input{position:absolute;opacity:0;width:0;min-height:0}
+.chip::before{content:"";width:16px;height:16px;border-radius:50%;box-shadow:var(--in-sm);flex:none}
+.chip:has(input:checked){box-shadow:var(--in-sm);color:var(--ink)}
+.chip:has(input:checked)::before{background:var(--green);box-shadow:0 0 0 3px rgba(31,178,107,.18)}
+.chip:has(input:focus-visible){outline:2px solid var(--accent)}
 
-#go{min-height:52px;font-size:17px;border-radius:12px}
-#status{color:var(--muted);min-height:0;margin:0;font-size:14px}
+#go{min-height:58px;font-size:17px;border-radius:18px}
+#status{color:var(--muted);margin:0 4px;font-size:14px}
 #status:empty{display:none}
 #status.err{color:var(--red)}
-.prog{display:none}.prog.on{display:block}
-.ptxt{font-size:13px;color:var(--muted);margin-bottom:4px}
-.ptrack{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
-.pbar{height:100%;width:0;background:var(--blue);border-radius:4px;transition:width .5s ease;position:relative;overflow:hidden}
-.pbar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 1.2s linear infinite}
+.prog{display:none;padding:12px 14px;border-radius:18px;box-shadow:var(--out-sm)}.prog.on{display:block}
+.ptxt{font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600}
+.ptrack{height:12px;border-radius:6px;box-shadow:var(--in-sm);overflow:hidden;padding:2px}
+.pbar{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s ease;position:relative;overflow:hidden}
+.pbar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:shine 1.2s linear infinite}
 @keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
 .spin{display:none;width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;animation:rot .8s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes rot{to{transform:rotate(360deg)}}
-#go.busy .spin{display:inline-block}#go.busy{opacity:.85}
-.geohelp{display:none;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:14px}
+#go.busy .spin{display:inline-block}#go.busy{opacity:.9}
+.geohelp{display:none;padding:14px;border-radius:18px;box-shadow:var(--in-sm);font-size:14px}
 .geohelp.on{display:block}.geohelp ol{margin:6px 0 0;padding-left:20px}.geohelp li{margin:3px 0}
 
-/* résultats */
-.best{background:var(--green);color:#fff;border-radius:14px;padding:14px;display:none;scroll-margin-top:8px;font-size:15px}
-.best .big{font-size:clamp(24px,7vw,36px);font-weight:800;line-height:1.1}
-.best a{color:#fff;font-weight:700}
-#map{height:260px;border-radius:14px;display:none}
-#resultsPanel h2{font-size:16px;margin:0 0 6px}
-table{width:100%;border-collapse:collapse;font-size:15px}
-th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+/* résultat principal : carte en relief avec pastille verte */
+.best{display:none;border-radius:24px;padding:18px;box-shadow:var(--out);scroll-margin-top:10px;font-size:15px;position:relative;overflow:hidden}
+.best::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--green)}
+.best>div:first-child{color:var(--green);font-weight:700;font-size:14px}
+.best .big{font-size:clamp(24px,7vw,34px);font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.best a{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:14px;color:#fff;background:var(--green);text-decoration:none;font-weight:700;box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi)}
+.best b{color:var(--green)}
+#map{height:260px;border-radius:22px;display:none;box-shadow:var(--out);border:6px solid var(--base)}
+#resultsPanel h2{font-size:16px;margin:2px 4px 8px}
+table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}
+th,td{padding:10px 8px;text-align:left;vertical-align:top}
 td.n,th.n{text-align:right;white-space:nowrap}
-tr.top td{background:light-dark(#e6f6ee,#10281c)}
-.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-.meta .toll{border-color:var(--amber);background:light-dark(#fff6dc,#3a2e00)}
-.meta span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:1px 7px;font-size:13px;white-space:nowrap}
-@media(max-width:640px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;grid-template-columns:26px 1fr auto;column-gap:8px;padding:8px 4px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:0}.stack td[data-l="Rang"]{grid-row:1/3;font-weight:800}.stack td[data-l="Station"]{grid-row:1/3}.stack td[data-l="Coût total"]{grid-column:3}.stack td[data-l="Écart"]{grid-column:3;color:var(--muted);font-size:13px}}
+td[data-l="Station"] a{color:var(--ink);text-decoration:none}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.meta span{border-radius:9px;padding:2px 8px;font-size:13px;white-space:nowrap;box-shadow:var(--in-sm)}
+.meta span:first-child{color:var(--accent);font-weight:700}
+.meta .toll{color:#b7791f;font-weight:700}
+.stack tbody tr{box-shadow:var(--out-sm);border-radius:16px}
+@media(max-width:640px){table{font-size:14px;border-spacing:0}.stack thead{display:none}
+  .stack tbody{display:grid;gap:12px}
+  .stack tr{display:grid;grid-template-columns:30px 1fr auto;column-gap:10px;padding:12px;border-radius:16px;box-shadow:var(--out-sm)}
+  .stack td{border:0;padding:0}
+  .stack td[data-l="Rang"]{grid-row:1/3;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;box-shadow:var(--in-sm)}
+  .stack tr.top td[data-l="Rang"]{background:var(--green);color:#fff;box-shadow:none}
+  .stack td[data-l="Station"]{grid-row:1/3}
+  .stack td[data-l="Coût total"]{grid-column:3;font-size:16px}
+  .stack td[data-l="Écart"]{grid-column:3;color:var(--red);font-size:13px;font-weight:600}
+  .stack tr.top td[data-l="Écart"]{color:var(--green)}}
 @media(max-width:360px){.chips{grid-template-columns:1fr 1fr}.chips select{grid-column:1/-1;width:100%}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header><h1>⛽ Où faire le plein ?</h1></header>
+<header><span class="logo">⛽</span><div><h1>Où faire le plein ?</h1><p>Le moins cher, trajet et péage compris</p></div></header>
 <main>
   <section class="card closed" id="carBox">
     <div class="sum">
@@ -107,7 +142,7 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
       <div id="carCard"></div>
       <div class="row">
         <div><label class="lbl" for="fuel">Carburant</label><select id="fuel"></select></div>
-        <div><label class="lbl" for="conso">Conso (L/100 km)</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
+        <div><label class="lbl" for="conso">L/100 km</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
         <div><button type="button" class="primary" id="carOk">Valider</button></div>
       </div>
     </div>
@@ -153,11 +188,11 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123d</p>
+  <p class="muted" style="text-align:center">Version 20261123f</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123d"></script>
-<script src="app.js?v=20261123d"></script>
+<script src="cars.js?v=20261123f"></script>
+<script src="app.js?v=20261123f"></script>
 </body>
 </html>
