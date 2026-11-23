@@ -695,7 +695,11 @@ function openGmap(s){
   const d = $("gmap"); d.showModal ? d.showModal() : d.setAttribute("open","");
 }
 $("gmap").addEventListener("close", ()=>{ $("gFrame").src = "about:blank"; });
-function focusStation(i){ if(LAST && LAST[i]) openGmap(LAST[i]); }
+function focusStation(i){
+  FOCUS = i; setView("map");
+  setTimeout(()=>{ try{ $("viewSw").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }, 50);
+  applyFocus();
+}
 function applyFocus(){
   if(FOCUS==null || !map || !MARKERS[FOCUS] || !LAST || !LAST[FOCUS]) return;
   const s = LAST[FOCUS], m = MARKERS[FOCUS];
@@ -703,7 +707,9 @@ function applyFocus(){
   setTimeout(()=>{ try{ m.openPopup(); }catch(e){} }, 300);
   FOCUS = null;
 }
-$("best").addEventListener("click", ev=>{ if(ev.target.closest("[data-bestmap]") && LAST) openGmap(LAST[0]); });
+$("best").addEventListener("click", ev=>{ if(ev.target.closest("[data-bestmap]") && LAST) focusStation(0); });
+// fiche d'une station sur la carte : bouton Google Maps
+$("map").addEventListener("click", ev=>{ const b = ev.target.closest("[data-gmap]"); if(b && LAST) openGmap(LAST[+b.dataset.gmap]); });
 $("rows").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-map]"); if(b){ ev.stopPropagation(); focusStation(+b.dataset.map); } });
 let leafletP = null;
 function loadLeaflet(){
@@ -715,6 +721,18 @@ function loadLeaflet(){
   return leafletP;
 }
 let tiles = null;
+function popupHTML(s,i){
+  const nav = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
+  const ev = !!s.ch;
+  const name = ev ? evName(s) : sName(s);
+  const addr = ev ? (s.a||"") : `${s.adresse||""}, ${s.ville||""}`;
+  const chips = ev
+    ? `<span class="pc">${fmtMin(s.ch.min)} de charge</span><span>${fmt(s.p,0)} kW</span><span>${fmt(s.km,1)} km</span>${s.cost!=null?`<span>≈ ${fmt(s.cost)} €</span>`:""}`
+    : `<span class="pc">${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km</span><span>total ${fmt(s.total)} €</span>`;
+  return `<div class="pop"><div class="pt"><span class="rk${i?"":" top"}">${i?i+1:"★"}</span><b>${esc(name)}</b></div>
+    <div class="pa">${esc(addr)}</div><div class="pchips">${chips}</div>
+    <div class="pb"><a href="${nav}" target="_blank" rel="noopener">Itinéraire</a><button type="button" data-gmap="${i}">Google Maps</button></div></div>`;
+}
 function drawMap(st){
   if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
   if($("map").hidden) return;
@@ -751,7 +769,7 @@ function drawMap(st){
     const val = s.ch ? fmtMin(s.ch.min) : `${fmt(s.price,3)} €`;
     const html = `<div class="pinw${i?"":" best"}" style="z-index:${i?1:2}">${avatar(name)}<b>${val}</b>${i?`<small>${i+1}</small>`:`<small>★</small>`}</div>`;
     MARKERS[i] = L.marker([s.lat,s.lon],{icon:L.divIcon({className:"pin", html, iconSize:[0,0]}), zIndexOffset: i?(-i):1000, riseOnHover:true, title:name})
-      .bindPopup(s.popup || `<b>${i+1}. ${esc(sName(s))}</b><br>${esc(s.adresse)}, ${esc(s.ville)}<br>${fmt(s.price,3)} €/L – total ${fmt(s.total)} €`, {offset:[0,-34]}).addTo(layer);
+      .bindPopup(popupHTML(s,i), {offset:[0,-34], maxWidth:290, minWidth:250, className:"spop"}).addTo(layer);
   });
   map.invalidateSize();
   map.fitBounds(L.latLngBounds([[origin.lat,origin.lon],...st.map(s=>[s.lat,s.lon])]).pad(0.15), {maxZoom:15});
