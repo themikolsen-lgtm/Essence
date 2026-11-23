@@ -85,14 +85,26 @@ function selectCar(e, closeList=true){
   fillFuels(FUEL_KEYS[e.fuel]);
   $("conso").value = e.conso;
   updSummary();
-  if(closeList){ $("carHits").innerHTML=""; setCarOpen(false); }
+  if(closeList){ $("carHits").innerHTML=""; setCarOpen(false); setStatus(""); }
   save();
 }
 const isEV = () => $("fuel").value==="elec";
-const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station la plus rentable";
+const AVG = {gazole:5.5,e10:6.5,sp95:6.5,sp98:6.8,e85:8.0,gplc:8.0,elec:17};
+function noCarDefaults(){
+  if(car) return;
+  $("conso").value = AVG[$("fuel").value] || 6.5;
+  if(isEV()){ $("bat").value=50; $("dcmax").value=100; $("acmax").value=11; }
+}
+$("noCar").addEventListener("click", ()=>{
+  car = null; $("carq").value = ""; $("carHits").innerHTML = "";
+  fillFuels(Object.keys(FUELS)); noCarDefaults(); updSummary(); save();
+  setStatus("Choisissez votre carburant ci-dessous, puis « Valider ».");
+});
+$("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary(); save(); } });
+const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
 function updSummary(){
-  $("sumName").textContent = car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : "Ma voiture";
+  $("sumName").textContent = car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : `${FUELS[$("fuel").value]||"Carburant"} (sans voiture précise)`;
   const c = +$("conso").value;
   if(isEV()){
     $("sumInfo").textContent = `Électrique${c>0?" · "+fmt(c,1)+" kWh/100":""} · ${$("socNow").value} → ${$("socTarget").value} %`;
@@ -109,7 +121,8 @@ function updSummary(){
   if(!$("go").classList.contains("busy")) $("golbl").textContent = goLabel();
   document.querySelector("header h1").textContent = ev ? "Où recharger ?" : "Où faire le plein ?";
   document.querySelector("header .logo").textContent = ev ? "⚡" : "⛽";
-  document.querySelector("header p").textContent = ev ? "La plus rapide, trajet compris, et quoi faire pendant la charge" : "Le moins cher, trajet et péage compris";
+  document.querySelector("#carBox .sum .ic").textContent = car ? "🚗" : (ev ? "⚡" : "⛽");
+  document.querySelector("header p").textContent = ev ? "Charge rapide et pas chère, et quoi faire à côté" : "Le moins cher, trajet compris";
 }
 function setCarOpen(open){
   if(!open && !(+$("conso").value>0)) open = true;
@@ -134,7 +147,8 @@ function fillFuels(keys, keep){
   if(keys.includes(prev)) $("fuel").value = prev;
 }
 let tCar;
-$("carq").addEventListener("input", ()=>{ clearTimeout(tCar); tCar=setTimeout(renderHits,150); });
+$("carq").addEventListener("input", ()=>{ clearTimeout(tCar); tCar=setTimeout(renderHits,150);
+  if(!$("carq").value.trim() && car){ car=null; $("carHits").innerHTML=""; fillFuels(Object.keys(FUELS)); noCarDefaults(); updSummary(); } });
 $("carHits").addEventListener("click", ev=>{ const b=ev.target.closest("button"); if(b) selectCar(ENTRIES[+b.dataset.i]); });
 
 // ---------- quantité ----------
@@ -156,13 +170,19 @@ function updQ(){
 ["qty","tank","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>{ $(id).addEventListener("change",()=>{updQ();save();}); $(id).addEventListener("input",updQ); });
 
 // ---------- préférences ----------
-function save(){ store.set("prefs2",{car:car?ENTRIES.indexOf(car):null,carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
+const carKey = e => e ? [e.brand,e.model,e.gen,e.eng].join("|") : null;
+function save(){ store.set("prefs2",{v:2,carKey:carKey(car),addr:$("addr").value.startsWith("📍")?"":$("addr").value.trim(),carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
   qty:$("qty").value,tank:$("tank").value,soc:$("socNow").value,tgt:$("socTarget").value,bat:$("bat").value,dc:$("dcmax").value,ac:$("acmax").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
+const FIRST_VISIT = !p;
 fillFuels(Object.keys(FUELS));
 if(p){
   $("carq").value = p.carq||"";
-  if(p.car!=null && ENTRIES[p.car]) selectCar(ENTRIES[p.car]);
+  // voiture retrouvée par son nom (stable même si la liste de modèles évolue)
+  const saved = p.carKey ? ENTRIES.find(e=>carKey(e)===p.carKey)
+              : (p.carq ? searchCars(p.carq)[0] : null) || (p.car!=null ? ENTRIES[p.car] : null);
+  if(saved) selectCar(saved);
+  if(p.addr) $("addr").value = p.addr;
   if(p.fuel) fillFuels([...$("fuel").options].map(o=>o.value), p.fuel);
   if(p.conso) $("conso").value=p.conso;
   [["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"]].forEach(([k,id])=>{ if(p[k]!=null&&p[k]!=="") $(id).value=p[k]; });
@@ -171,8 +191,15 @@ if(p){
   $("notoll").checked = !!p.nt;
 }
 if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
+// demander au navigateur de ne pas effacer ces données
+try{ navigator.storage?.persist?.(); }catch(e){}
+$("forget").addEventListener("click", ()=>{
+  try{ localStorage.removeItem("essence_prefs2"); }catch(e){}
+  location.reload();
+});
+if(!car && !(+$("conso").value>0)){ if(!p) $("fuel").value="e10"; noCarDefaults(); }
 updQ(); updSummary();
-$("carBox").classList.toggle("closed", +$("conso").value>0);
+$("carBox").classList.toggle("closed", !!p && +$("conso").value>0);
 
 let pTimer;
 function progress(pct, txt){
@@ -249,6 +276,7 @@ function askAddress(kind){
 }
 function clearAsk(){ $("addrCard").classList.remove("need"); $("addrNote").textContent=""; $("addr").placeholder="Adresse ou ville"; }
 $("addr").addEventListener("input", clearAsk);
+$("addr").addEventListener("change", save);
 async function locate(auto){
   $("geohelp").classList.remove("on");
   // en automatique : pas de gros message d'aide, juste une indication
@@ -280,12 +308,12 @@ async function locate(auto){
     else $("addr").value = "📍 Ma position";
   }catch(e){ $("addr").value = "📍 Ma position"; }
   showWhere();
-  if(auto && !(+$("conso").value>0)){ progress(null); setStatus("Position trouvée. Choisissez votre voiture puis lancez la recherche."); return; }
+  if(auto && (FIRST_VISIT || !(+$("conso").value>0))){ progress(null); setStatus("Position trouvée. Choisissez votre voiture ou votre carburant, puis « Trouver »."); return; }
   search();
 }
 $("geo").addEventListener("click", ()=>locate(false));
 // localisation automatique à l'ouverture
-if(!$("addr").value.trim()) locate(true);
+if(!$("addr").value.trim()) locate(true); else $("where").textContent = "📍 "+$("addr").value;
 // si l'utilisateur modifie le champ, on oublie la position GPS
 $("addr").addEventListener("focus", ()=>{ if($("addr").value.startsWith("📍")){ $("addr").value=""; origin=null; } });
 $("go").addEventListener("click", search);
@@ -531,9 +559,14 @@ async function searchEV(){
       s.tollCost = noToll ? 0 : (s.tollKm||0)*TOLL_EUR_KM*(rt?2:1);
     });
     st = st.filter(s=>s.ch);
-    st.sort(sortBy()==="cost"
-      ? (a,b)=>((a.cost??99)+a.tollCost)-((b.cost??99)+b.tollCost) || a.totalMin-b.totalMin
-      : (a,b)=>a.totalMin-b.totalMin);
+    // rapport durée / prix : chaque critère ramené à la médiane (prix inconnu = un peu pénalisé)
+    const med = arr => { const v = arr.filter(x=>x!=null && isFinite(x)).sort((a,b)=>a-b); return v.length ? v[Math.floor(v.length/2)] : 1; };
+    const mCost = Math.max(1, med(st.map(s=>s.cost))), mTime = Math.max(1, med(st.map(s=>s.totalMin)));
+    st.forEach(s=>{ const c = (s.cost ?? mCost*1.25) + s.tollCost; s.score = c/mCost + s.totalMin/mTime; });
+    const mode = sortBy();
+    st.sort(mode==="cost" ? (a,b)=>((a.cost??99)+a.tollCost)-((b.cost??99)+b.tollCost) || a.totalMin-b.totalMin
+          : mode==="best" ? (a,b)=>a.score-b.score
+          : (a,b)=>a.totalMin-b.totalMin);
     renderEV(st, ctx, rt);
   };
   st.forEach(s=>{ s.km = haversine(origin,s)*1.3; s.min = s.km/50*60; s.road=false; });
@@ -569,7 +602,7 @@ function renderEV(st, ctx, rt){
   const costTxt = s => s.g ? "Gratuit" : s.cost!=null ? `≈ ${fmt(s.cost)} € (${fmt(s.pk,2)} €/kWh)` : "Prix non communiqué";
   $("best").style.display="block";
   $("best").innerHTML = `
-    <div>${$("evSort").value==="cost"?"La moins chère":"La plus rapide"}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
+    <div>${{cost:"La moins chère",best:"Le meilleur rapport durée / prix",time:"La plus rapide"}[$("evSort").value]}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
     <div class="big">⚡ ${esc(evName(best))}</div>
     <div>${esc(evPlace(best))}${esc(best.a)}</div>
     <div class="big" style="margin-top:6px">${fmtMin(best.ch.min)} <span style="font-size:.5em">de charge (${ctx.now} → ${ctx.tgt} %)</span></div>
@@ -588,7 +621,7 @@ function renderEV(st, ctx, rt){
       <div class="meta"><span>${fmt(s.p,0)} kW</span><span>${esc(plugs(s))}</span><span>${fmt(s.km,1)} km</span><span>${s.q} point${s.q>1?"s":""} de charge</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}<span>${esc(costTxt(s))}</span></div>
       <button type="button" class="nearbtn" data-i="${i}">☕ Que faire à côté ?</button><div class="near"></div></td>
     <td class="n" data-l="Coût total"><b>${fmtMin(s.ch.min)}</b></td>
-    <td class="n" data-l="Écart">${i?"+"+fmtMin(s.totalMin-best.totalMin):"—"}</td></tr>`).join("");
+    <td class="n" data-l="Écart">${s.cost!=null?fmt(s.cost,0)+" €":(s.g?"0 €":"? €")}</td></tr>`).join("");
   $("rows").onclick = ev => { const b=ev.target.closest(".nearbtn"); if(!b) return; b.disabled=true; loadNearby(st[+b.dataset.i], b.nextElementSibling).then(()=>b.remove()); };
   st.forEach((s,i)=>{ s.popup = `<b>${i+1}. ${esc(evName(s))}</b><br>${esc(s.a)}<br>${fmt(s.p,0)} kW – charge ${fmtMin(s.ch.min)}`; });
   drawMap(st);
