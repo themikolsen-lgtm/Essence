@@ -184,7 +184,7 @@ function drawChart(s){
   } else {
     const n = pts.length, x = i => n===1 ? (X0+X1)/2 : X0 + i/(n-1)*(X1-X0);
     if(ref) g += `<line x1="${X0}" x2="${X1}" y1="${y(ref)}" y2="${y(ref)}" stroke="var(--muted)" stroke-dasharray="2 4" stroke-width="1.5"/><text x="${X1}" y="${y(ref)-5}" text-anchor="end">annoncé ${fmt(ref,1)}</text>`;
-    if(avgLine!=null) g += `<line x1="${X0}" x2="${X1}" y1="${y(avgLine)}" y2="${y(avgLine)}" stroke="var(--green)" stroke-dasharray="6 5" stroke-width="2"/>`;
+    if(avgLine!=null) g += `<line x1="${X0}" x2="${X1}" y1="${y(avgLine)}" y2="${y(avgLine)}" stroke="var(--ink)" stroke-dasharray="6 5" stroke-width="2" opacity=".55"/>`;
     g += `<path d="${pts.map((p,i)=>(i?"L":"M")+x(i).toFixed(1)+","+y(p.v).toFixed(1)).join("")}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
     pts.forEach((p,i)=>{ g += `<circle cx="${x(i)}" cy="${y(p.v)}" r="4.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="2.5"/>`; });
     const step = Math.max(1, Math.ceil(n/(W<360?4:6)));
@@ -192,8 +192,8 @@ function drawChart(s){
     const lastP = pts[n-1];
     g += `<text class="val" x="${Math.min(x(n-1),X1)}" y="${y(lastP.v)-10}" text-anchor="${n===1?"middle":"end"}">${fmt(lastP.v,dec)}</text>`;
     $("cLegend").textContent = metric==="cons"
-      ? `Orange : chaque plein complet · vert pointillé : votre moyenne (${fmt(avgLine,1)} L/100)${ref?" · gris : consommation annoncée":""}`
-      : `Prix payé à chaque plein · vert pointillé : prix moyen (${fmt(avgLine,3)} €/L)`;
+      ? `Courbe : chaque plein complet · tirets : votre moyenne (${fmt(avgLine,1)} L/100)${ref?" · points gris : consommation annoncée":""}`
+      : `Prix payé à chaque plein · tirets : prix moyen (${fmt(avgLine,3)} €/L)`;
   }
   svg.innerHTML = g;
 }

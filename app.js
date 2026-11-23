@@ -659,17 +659,19 @@ let VIEW = "list", LAST = null;
 function setView(v){
   VIEW = v;
   $("viewSw").querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected", b.dataset.v===v));
-  $("map").hidden = v!=="map";
-  // en vue carte, la carte passe juste sous le choix Liste / Carte
-  if(v==="map") $("viewSw").after($("map")); else $("best").after($("map"));
+  $("map").hidden = !LAST;
+  // vue Carte : la carte juste sous le choix Liste / Carte ; vue Liste : la carte sous la liste
+  if(v==="map") $("viewSw").after($("map")); else $("resultsPanel").after($("map"));
   $("resultsPanel").style.display = LAST ? (v==="list" ? "block" : "none") : "none";
-  if(v==="map" && LAST){ try{ drawMap(LAST); }catch(e){} setTimeout(()=>{ try{ map && map.invalidateSize(); }catch(e){} }, 60); }
+  if(LAST){ try{ drawMap(LAST); }catch(e){} setTimeout(()=>{ try{ map && map.invalidateSize(); }catch(e){} }, 60); }
 }
 $("viewSw").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-v]"); if(b) setView(b.dataset.v); });
 function showResults(st){
   LAST = st; $("viewSw").hidden = false;
-  if(VIEW==="map"){ $("resultsPanel").style.display="none"; try{ drawMap(st); }catch(e){} }
-  else { $("resultsPanel").style.display="block"; }
+  $("resultsPanel").style.display = VIEW==="map" ? "none" : "block";
+  if(VIEW==="map") $("viewSw").after($("map")); else $("resultsPanel").after($("map"));
+  $("map").hidden = false;
+  try{ drawMap(st); }catch(e){}
 }
 let MARKERS = [], FOCUS = null;
 function focusStation(i){

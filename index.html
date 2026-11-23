@@ -6,7 +6,7 @@
 <title>Essence – le plein le plus rentable</title>
 <script>
 /* mise à jour automatique : si une version plus récente est en ligne, on recharge sans le cache */
-window.APP_V="202611231624";
+window.APP_V="202611231628";
 (function(){try{
   fetch("version.txt?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():null}).then(function(v){
     v=(v||"").trim(); if(!v||v===window.APP_V) return;
@@ -19,7 +19,7 @@ window.APP_V="202611231624";
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff5a1f">
+<meta name="theme-color" content="#12a150">
 <link rel="preconnect" href="https://data.economie.gouv.fr" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,7 +28,7 @@ window.APP_V="202611231624";
 :root{color-scheme:light dark;
   --bg:light-dark(#ffffff,#111418);--card:light-dark(#f2f4f7,#1c2128);--field:light-dark(#e4e8ee,#2a313b);
   --ink:light-dark(#14181f,#eef1f5);--muted:light-dark(#667085,#98a2b3);
-  --accent:#ff5a1f;--green:#12a150;--red:#e5484d;--amber:#f5a524;--blue:#2563eb}
+  --accent:#12a150;--green:#12a150;--red:#e5484d;--amber:#f5a524;--blue:#2563eb}
 *{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
@@ -411,7 +411,7 @@ main{gap:14px}
 .stack td[data-l="Station"] .sub{font-size:13px;color:var(--muted);margin-top:1px}
 .stack td[data-l="Station"] .when{font-size:11px;color:var(--muted);margin-top:4px}
 .meta span{background:var(--bg)}
-.meta span:first-child{background:light-dark(#ffe7dc,#3a1f12);color:var(--accent)}
+.meta span:first-child{background:light-dark(#dcf5e6,#12301f);color:var(--accent)}
 .stack tr{padding:14px!important;row-gap:2px}
 /* carnet */
 .entry{padding:12px 4px}
@@ -484,7 +484,7 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
 .stpick{max-height:300px;margin-top:8px}
 .stpick .sec{margin:6px 10px 2px;font-size:12px;font-weight:800;color:var(--muted)}
 .stpick button.on{outline:2px solid var(--accent)}
-.stpick mark{background:light-dark(#ffe7dc,#3a1f12);color:inherit;border-radius:4px;padding:0 2px}
+.stpick mark{background:light-dark(#dcf5e6,#12301f);color:inherit;border-radius:4px;padding:0 2px}
 .fullchip{margin-top:12px;width:max-content;max-width:100%;padding:4px 16px}
 
 /* Interrupteurs « Aller-retour » / « Sans péage » / « Plein complet » : état écrit en clair */
@@ -539,9 +539,20 @@ tr.top .racts button{background:#fff;color:#14181f}
 .av{background:var(--ink)!important;color:var(--bg)}
 .av .i{width:55%;height:55%}
 .best .av{background:#fff!important;color:var(--green)}
-.pinw .av{background:var(--field)!important;color:#14181f}
+.pinw .av{background:#e9edf2!important;color:#14181f}
 .pinw.best .av{background:#fff!important;color:var(--green)}
 tr.top td[data-l="Rang"] .av{background:var(--green)!important;color:#fff}
+/* Couleur principale verte */
+:root{--green:#0b7d3e}
+@media (prefers-color-scheme:dark){:root{--green:#0f8f48}}
+header{background:linear-gradient(160deg,#16a85a,#0e8e4a)}
+.best{background:var(--green)}
+.best .save{color:var(--green)}
+.best a{color:var(--green)}
+.pinw.best{background:var(--green)}
+.pinw.best::after{border-top-color:var(--green)}
+/* carte sous la liste : un peu moins haute */
+#resultsPanel + #map{height:min(48vh,420px)!important}
 [hidden]{display:none!important}
 
 /* Repères de la carte */
@@ -682,7 +693,7 @@ tr.top td[data-l="Rang"] .av{background:var(--green)!important;color:#fff}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231624</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231628</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -740,10 +751,10 @@ tr.top td[data-l="Rang"] .av{background:var(--green)!important;color:#fff}
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611231624"></script>
-<script src="app.js?v=202611231624"></script>
-<script src="carnet.js?v=202611231624"></script>
-<script src="firebase-config.js?v=202611231624"></script>
-<script type="module" src="compte.js?v=202611231624"></script>
+<script src="cars.js?v=202611231628"></script>
+<script src="app.js?v=202611231628"></script>
+<script src="carnet.js?v=202611231628"></script>
+<script src="firebase-config.js?v=202611231628"></script>
+<script type="module" src="compte.js?v=202611231628"></script>
 </body>
 </html>
