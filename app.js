@@ -1,4 +1,27 @@
 {
+// ---------- sélections en pilules ----------
+function pillify(sel){
+  const box = document.createElement("div"); box.className="pills"; box.setAttribute("role","group");
+  if(sel.getAttribute("aria-label")) box.setAttribute("aria-label", sel.getAttribute("aria-label"));
+  sel.after(box); sel.tabIndex = -1;
+  const draw = () => {
+    box.innerHTML = [...sel.options].map(o=>`<button type="button" data-v="${o.value}" aria-pressed="${o.value===sel.value}">${o.textContent}</button>`).join("");
+    const on = box.querySelector("[aria-pressed=true]");
+    if(on && box.scrollWidth>box.clientWidth) on.scrollIntoView({block:"nearest",inline:"center"});
+  };
+  box.addEventListener("click", e=>{
+    const b = e.target.closest("button"); if(!b || b.dataset.v===sel.value) return;
+    sel.value = b.dataset.v; sel.dispatchEvent(new Event("change",{bubbles:true})); sel.dispatchEvent(new Event("input",{bubbles:true}));
+  });
+  // garder les pilules à jour quand le script change la valeur ou les options
+  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"value");
+  Object.defineProperty(sel,"value",{get(){return d.get.call(this)}, set(v){d.set.call(this,v); draw();}});
+  new MutationObserver(draw).observe(sel,{childList:true,subtree:true});
+  sel.addEventListener("change", draw);
+  draw();
+}
+document.querySelectorAll("select[data-pills]").forEach(pillify);
+
 const FUELS = {gazole:"Gazole",e10:"SP95-E10",sp95:"SP95",sp98:"SP98",e85:"E85 (bioéthanol)",gplc:"GPL"};
 const FUEL_NAME = {e:"Essence",d:"Diesel",h:"Hybride essence",g:"GPL / essence",x:"Électrique"};
 const FUEL_KEYS = {e:["e10","sp95","sp98","e85"],h:["e10","sp95","sp98"],d:["gazole"],g:["gplc","e10","sp95","sp98"],x:[]};
