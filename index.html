@@ -8,7 +8,8 @@
 <link rel="icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ff5a1f">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://data.economie.gouv.fr" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Flat design : aplats de couleur, aucune ombre, aucun dégradé */
@@ -575,7 +576,7 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231553</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231557</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -630,11 +631,10 @@ input.gauge::-moz-range-thumb{width:22px;height:22px;background:#fff;border:6px 
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=202611231553"></script>
-<script src="app.js?v=202611231553"></script>
-<script src="carnet.js?v=202611231553"></script>
-<script src="firebase-config.js?v=202611231553"></script>
-<script type="module" src="compte.js?v=202611231553"></script>
+<script src="cars.js?v=202611231557"></script>
+<script src="app.js?v=202611231557"></script>
+<script src="carnet.js?v=202611231557"></script>
+<script src="firebase-config.js?v=202611231557"></script>
+<script type="module" src="compte.js?v=202611231557"></script>
 </body>
 </html>

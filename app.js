@@ -46,7 +46,7 @@ const fmt = (n,d=2) => n.toLocaleString("fr-FR",{minimumFractionDigits:d,maximum
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[-_/+(),]/g," ").replace(/\s+/g," ").trim();
 const ROMAN = {i:"1",ii:"2",iii:"3",iv:"4",v:"5",vi:"6",vii:"7",viii:"8"};
-let origin = null, map = null, layer = null, car = null;
+let origin = null, map = null, layer = null, car = null, SEARCH_ID = 0;
 const BRANDS = fetch("brands.json?d="+new Date().toISOString().slice(0,10)).then(r=>r.ok?r.json():{}).catch(()=>({}));
 
 // ---------- recherche de voiture ----------
@@ -532,7 +532,7 @@ async function addBrands(o, list){
 const TOLL_EUR_KM = 0.11;
 async function roadDistances(o, list, noToll){
   const coords = [o,...list].map(p=>`${p.lon.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
-  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 5000);
+  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 3500);
   try{
     const base = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`;
     let r = await fetch(base+(noToll?"&exclude=toll":""),{signal:ctrl.signal}).then(r=>r.json());
@@ -544,7 +544,7 @@ async function roadDistances(o, list, noToll){
 
 // km sur autoroute à péage, d'après l'itinéraire détaillé
 async function tollKm(o, s){
-  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 5000);
+  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 3500);
   try{
     const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${o.lon.toFixed(5)},${o.lat.toFixed(5)};${s.lon.toFixed(5)},${s.lat.toFixed(5)}?overview=false&steps=true`,{signal:ctrl.signal}).then(r=>r.json());
     if(r.code!=="Ok") return null;
@@ -586,27 +586,26 @@ async function search(){
       st.sort((a,b)=>a.total-b.total);
       render(st, {fuel,liters,rt,noToll});
     };
-    // 1) résultat immédiat avec distances estimées
-    progress(70,"Calcul du plus rentable…");
+    // 1) résultat immédiat avec distances estimées : le bouton est libéré tout de suite
     finish();
-    setStatus(`${st.length} stations comparées autour de ${origin.label}. Calcul des distances par la route…`);
-    // 2) affinage : distances réelles par la route (+ enseignes manquantes), sans bloquer l'affichage
-    progress(85,"Distances exactes par la route…");
-    const missing = st.filter(s=>!s.brand);
-    await Promise.all([roadDistances(origin, st, noToll), missing.length>3 && !Object.keys(brands).length ? addBrands(origin, missing) : null]);
-    finish();
-    // péages : on vérifie l'itinéraire des stations en tête, jusqu'à ce que le classement soit stable
-    if(!noToll){
-      progress(93,"Vérification des péages…");
-      for(let round=0; round<3; round++){
-        const todo = st.slice(0,6).filter(s=>s.tollKm===undefined);
-        if(!todo.length) break;
+    progress(100,"Résultats prêts ✓");
+    setStatus(`${st.length} stations comparées autour de ${origin.label} · affinage des distances…`);
+    // 2) affinage en arrière-plan : distances par la route, péages (une nouvelle recherche l'annule)
+    const token = ++SEARCH_ID;
+    (async () => { try{
+      const missing = st.filter(s=>!s.brand);
+      await Promise.all([roadDistances(origin, st, noToll), missing.length>3 && !Object.keys(brands).length ? addBrands(origin, missing) : null]);
+      if(token!==SEARCH_ID) return;
+      finish();
+      if(!noToll){
+        const todo = st.slice(0,5).filter(s=>s.tollKm===undefined);
         await Promise.all(todo.map(async s=>{ const k = await tollKm(origin, s); s.tollKm = k ?? 0; }));
+        if(token!==SEARCH_ID) return;
         finish();
       }
-    }
-    progress(100,"Terminé ✓");
-    setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
+    }catch(e){}
+      if(token===SEARCH_ID) setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
+    })();
   }catch(e){ progress(null); setStatus(e.message||"Une erreur est survenue.", true); }
 }
 
@@ -641,12 +640,21 @@ function render(st, o){
       <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div>${s.maj?`<div class="when">prix du ${new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</div>`:""}</td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
-  drawMap(st);
+  try{ drawMap(st); }catch(e){}
   if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
   render.done = true;
 }
+let leafletP = null;
+function loadLeaflet(){
+  if(window.L) return Promise.resolve();
+  if(!leafletP) leafletP = new Promise((ok,ko)=>{
+    const css = document.createElement("link"); css.rel="stylesheet"; css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"; document.head.appendChild(css);
+    const js = document.createElement("script"); js.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; js.onload=ok; js.onerror=ko; document.head.appendChild(js);
+  });
+  return leafletP;
+}
 function drawMap(st){
-  if(typeof L==="undefined") return;
+  if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
   $("map").style.display="block";
   if(!map){ map=L.map("map"); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map); }
   if(layer) layer.remove();
@@ -739,21 +747,26 @@ async function searchEV(){
   ctx.driveKwh = 0;
   st.forEach(s=>{ const c=chargeMinutes(s,{...ctx,driveKwh:s.km*ctx.cons/100}); s._est = c ? c.min + s.min*(rt?2:1) : Infinity; });
   st.sort((a,b)=>a._est-b._est); st = st.slice(0,40);
-  progress(70,"Calcul du temps de charge…");
   compute();
   $("evSort").onchange = compute;
-  progress(85,"Distances exactes par la route…");
-  await roadDistances(origin, st, noToll);
-  compute();
-  if(!noToll){
-    progress(93,"Vérification des péages…");
-    const todo = st.slice(0,5).filter(s=>s.tollKm===undefined);
-    await Promise.all(todo.map(async s=>{ s.tollKm = (await tollKm(origin,s)) ?? 0; }));
-    compute();
-  }
-  progress(100,"Terminé ✓");
-  setStatus(`${st.length} bornes comparées autour de ${origin.label}.`);
+  progress(100,"Résultats prêts ✓");
+  setStatus(`${st.length} bornes comparées autour de ${origin.label} · affinage des distances…`);
   loadNearby(st[0], $("bestNear"));
+  const token = ++SEARCH_ID;
+  (async () => { try{
+    await roadDistances(origin, st, noToll);
+    if(token!==SEARCH_ID) return;
+    const first = st[0]; compute();
+    if(!noToll){
+      const todo = st.slice(0,5).filter(s=>s.tollKm===undefined);
+      await Promise.all(todo.map(async s=>{ s.tollKm = (await tollKm(origin,s)) ?? 0; }));
+      if(token!==SEARCH_ID) return;
+      compute();
+    }
+    if(st[0]!==first) loadNearby(st[0], $("bestNear"));
+  }catch(e){}
+    if(token===SEARCH_ID) setStatus(`${st.length} bornes comparées autour de ${origin.label}.`);
+  })();
 }
 const cleanTxt = t => String(t||"").replace(/_/g," ").replace(/\s+/g," ").trim();
 const niceName = t => { t = cleanTxt(t); return t && t===t.toUpperCase() && t.length>4 ? t.charAt(0)+t.slice(1).toLowerCase() : t; };
