@@ -1,0 +1,5 @@
+ressources CSV : ['Consolidation de la dernière version à date du schéma (v2.3.1) - 20261112', 'Consolidation de la v2.3.1 du schéma - 20261112', 'Documentation sur la consolidation - 20261112']
+fichier retenu : Documentation sur la consolidation - 20261112 https://static.data.gouv.fr/resources/base-nationale-des-irve-data-gouv-infrastructures-de-recharge-pour-vehicules-electriques-donnees-statiques/20261112-053401/ref-table-etalab-schema-irve-statique.csv
+colonnes : ['dataset_id', 'dataset_title', 'dataset_slug', 'dataset_page', 'resource_id', 'resource_title', 'resource_url', 'resource_last_modified', 'resource_created_at', 'publish_source', 'error_type', 'resource_extension', 'organization_or_owner', 'is_orga', 'resource_found_by', 'initial_version_name', 'is_valid_v_2.3.1', 'is_valid_one_version', 'most_recent_valid_version', 'is_downloaded', 'is_empty', 'columns_issue', 'is_schema_version_to_update', 'is_schema_to_drop', 'resource_schema_update_success', 'producer_notification_success']
+lignes : 2533 stations : 0
+tuiles : 0
