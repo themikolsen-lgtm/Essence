@@ -358,6 +358,14 @@ if(p){
 if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
 // demander au navigateur de ne pas effacer ces données
 try{ navigator.storage?.persist?.(); }catch(e){}
+// vider le cache : recharge la toute dernière version (réglages et carnet conservés)
+$("clearCache").addEventListener("click", async ()=>{
+  $("clearCache").textContent = "Nettoyage…";
+  try{ if(navigator.serviceWorker){ for(const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } }catch(e){}
+  try{ if(window.caches){ for(const k of await caches.keys()) await caches.delete(k); } }catch(e){}
+  try{ sessionStorage.clear(); }catch(e){}
+  location.replace(location.pathname + "?v=" + Date.now() + location.hash);
+});
 $("forget").addEventListener("click", ()=>{
   try{ ["essence_prefs2","essence_garage"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   location.reload();
