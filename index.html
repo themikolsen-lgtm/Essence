@@ -152,6 +152,10 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
 .qline label{display:flex;align-items:center;gap:6px;margin:0}
 .qline input{width:72px;min-height:38px;text-align:center;padding:0 8px;font-weight:700;color:var(--ink)}
 .qout b{color:var(--accent);font-size:20px;font-weight:800}
+.addrnote{margin:8px 6px 0;font-size:14px;font-weight:700;color:var(--accent)}
+.addrnote:empty{display:none}
+#addrCard.need{outline:3px solid var(--accent);outline-offset:-3px}
+#addrCard.need #addr{border-color:var(--accent);background:var(--bg)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -186,11 +190,12 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="addrCard">
     <div class="addrrow">
       <input id="addr" list="addrList" placeholder="Adresse ou ville" autocomplete="off" enterkeyhint="search" aria-label="Adresse"><datalist id="addrList"></datalist>
       <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle">📍</button>
     </div>
+    <p id="addrNote" class="addrnote" role="alert"></p>
     <span class="lbl" style="margin-top:10px">Rayon</span>
     <select id="radius" data-pills aria-label="Rayon"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="15">15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
     <div class="chips">
@@ -212,11 +217,11 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123l</p>
+  <p class="muted" style="text-align:center">Version 20261123m</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123l"></script>
-<script src="app.js?v=20261123l"></script>
+<script src="cars.js?v=20261123m"></script>
+<script src="app.js?v=20261123m"></script>
 </body>
 </html>

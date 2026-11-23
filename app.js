@@ -215,11 +215,23 @@ function geoHelp(kind){
   $("geohelp").classList.add("on");
 }
 const getPos = opts => new Promise((ok,ko)=>navigator.geolocation.getCurrentPosition(ok,ko,opts));
+// localisation impossible : on met en avant le champ adresse
+function askAddress(kind){
+  setStatus("");
+  $("addrCard").classList.add("need");
+  $("addr").placeholder = "Tapez votre adresse";
+  $("addrNote").textContent = kind==="denied"
+    ? "📍 Localisation bloquée sur ce téléphone. Tapez votre adresse ou une ville ci-dessus, puis « Trouver »."
+    : "📍 Position introuvable. Tapez votre adresse ou une ville ci-dessus, puis « Trouver ».";
+  try{ $("addrCard").scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){}
+}
+function clearAsk(){ $("addrCard").classList.remove("need"); $("addrNote").textContent=""; $("addr").placeholder="Adresse ou ville"; }
+$("addr").addEventListener("input", clearAsk);
 async function locate(auto){
   $("geohelp").classList.remove("on");
   // en automatique : pas de gros message d'aide, juste une indication
-  const fail = kind => { progress(null); if(auto){ setStatus(kind==="denied" ? "Localisation non autorisée : tapez une adresse, ou touchez 📍 pour voir comment l'activer." : "Position introuvable : tapez une adresse ou touchez 📍.", false); } else geoHelp(kind); };
-  if(!window.isSecureContext) return auto ? null : geoHelp("insecure");
+  const fail = kind => { progress(null); askAddress(kind); if(!auto) geoHelp(kind); };
+  if(!window.isSecureContext) return auto ? askAddress("unavailable") : geoHelp("insecure");
   if(!navigator.geolocation) return fail("unavailable");
   if(auto && navigator.permissions?.query){
     try{ const st = await navigator.permissions.query({name:"geolocation"}); if(st.state==="denied") return fail("denied"); }catch(e){}
@@ -228,15 +240,16 @@ async function locate(auto){
   let pos;
   try{
     // 1) position rapide (wifi / réseau), acceptée jusqu'à 10 min d'ancienneté
-    pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
+    pos = await getPos({enableHighAccuracy:false, timeout:auto?10000:12000, maximumAge:600000});
   }catch(e){
     if(e.code===1) return fail("denied");
     try{
       // 2) GPS précis, plus lent
       progress(8,"Recherche du signal GPS…");
-      pos = await getPos({enableHighAccuracy:true, timeout:25000, maximumAge:0});
+      pos = await getPos({enableHighAccuracy:true, timeout:auto?8000:20000, maximumAge:0});
     }catch(e2){ return fail(e2.code===1?"denied":"unavailable"); }
   }
+  clearAsk();
   origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"};
   try{
     const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${origin.lon}&lat=${origin.lat}&limit=1`).then(r=>r.json());
