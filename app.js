@@ -312,7 +312,7 @@ async function search(){
   try{
     if(!origin){
       const q=$("addr").value.trim();
-      if(!q) return setStatus("Tapez une adresse ou utilisez « Ma position actuelle ».", true);
+      if(!q) return locate(false);   // rien de rempli : on prend la position actuelle
       setStatus(""); progress(15,"Recherche de l'adresse…"); origin = await geocode(q);
     }
     setStatus(""); progress(35,`Prix ${FUELS[fuel]} dans un rayon de ${radius} km…`);
