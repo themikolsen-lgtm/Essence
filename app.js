@@ -696,18 +696,30 @@ function loadLeaflet(){
   });
   return leafletP;
 }
-let tiles = null, tilesDark = null;
+let tiles = null;
 function drawMap(st){
   if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
   if($("map").hidden) return;
-  // fond de carte clair ou sombre selon le téléphone (CARTO, données OpenStreetMap)
+  // fond de carte OpenStreetMap ; en mode sombre il est assombri par un filtre (voir #map.dark)
   const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  $("map").classList.toggle("dark", dark);
   if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); }
-  if(!tiles || tilesDark!==dark){
-    if(tiles) tiles.remove();
-    tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/rastertiles/${dark?"dark_all":"voyager"}/{z}/{x}/{y}{r}.png`,
-      {subdomains:"abcd", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
-    tilesDark = dark;
+  if(!tiles){
+    const SOURCES = [
+      ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}],
+      ["https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {subdomains:"abc", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · OSM France'}],
+      ["https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {subdomains:"abcd", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © CARTO'}]
+    ];
+    let src = 0, errors = 0, loaded = 0;
+    const use = i => {
+      if(tiles) tiles.remove();
+      tiles = L.tileLayer(SOURCES[i][0], SOURCES[i][1]).addTo(map);
+      errors = 0; loaded = 0;
+      tiles.on("tileload", ()=>{ loaded++; });
+      // si les images de ce fond n'arrivent pas, on passe au suivant
+      tiles.on("tileerror", ()=>{ errors++; if(errors>=4 && loaded===0 && src < SOURCES.length-1){ src++; use(src); } });
+    };
+    use(0);
   }
   if(layer) layer.remove();
   layer = L.layerGroup().addTo(map);
