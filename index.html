@@ -156,6 +156,24 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
 .addrnote:empty{display:none}
 #addrCard.need{outline:3px solid var(--accent);outline-offset:-3px}
 #addrCard.need #addr{border-color:var(--accent);background:var(--bg)}
+
+.gorow{display:grid;grid-template-columns:1fr auto;gap:8px}
+#more{width:auto;padding:0 18px;min-height:56px;font-size:15px}
+#more[aria-expanded=true]{background:var(--ink);color:var(--bg)}
+.where{margin:8px 6px 0;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.where:empty{display:none}
+#addrCard{margin-top:10px}
+#addrCard.need{outline:3px solid var(--accent);outline-offset:4px;border-radius:24px}
+.evline{flex-direction:column;align-items:stretch}
+.evline label{justify-content:space-between}
+#evSort{}
+#evSort+.pills{margin-bottom:8px}
+.nearbtn{margin-top:8px;width:auto;min-height:38px;padding:0 14px;font-size:14px;background:var(--field)}
+.near{margin-top:8px;font-size:14px}
+.near ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.near li{display:flex;justify-content:space-between;gap:8px}
+.near li span:last-child{color:var(--muted);white-space:nowrap}
+.best .near li span:last-child{color:rgba(255,255,255,.85)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -175,6 +193,7 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
       <div id="carCard"></div>
       <span class="lbl" style="margin-top:10px">Carburant</span>
       <select id="fuel" data-pills aria-label="Carburant"></select>
+      <div id="thermBox">
       <span class="lbl" style="margin-top:10px">Au moment du plein, il me reste</span>
       <select id="qty" data-pills aria-label="Ce qu'il reste dans le réservoir"><option value="R" selected>Réserve</option><option value="0.25">¼</option><option value="0.5">½</option><option value="0.75">¾</option><option value="L">Litres</option></select>
       <div class="qline">
@@ -183,28 +202,46 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
         <span class="qout">→ <b id="pleinOut">–</b> à mettre</span>
       </div>
       <p class="muted" id="qhint" style="margin:4px 16px 0">Réserve = il reste environ 4 L.</p>
+      </div>
+      <div id="evBox" style="display:none">
+        <span class="lbl" style="margin-top:10px">Batterie au moment de recharger</span>
+        <select id="socNow" data-pills aria-label="Batterie actuelle"><option value="10">10 %</option><option value="20" selected>20 %</option><option value="30">30 %</option><option value="40">40 %</option><option value="50">50 %</option></select>
+        <span class="lbl" style="margin-top:10px">Recharger jusqu'à</span>
+        <select id="socTarget" data-pills aria-label="Recharger jusqu'à"><option value="80" selected>80 %</option><option value="90">90 %</option><option value="100">100 %</option></select>
+        <div class="qline evline">
+          <label>Batterie <input id="bat" type="number" inputmode="decimal" step="1" min="10" max="130" value="50"> kWh</label>
+          <label>Recharge rapide <input id="dcmax" type="number" inputmode="numeric" step="1" min="0" max="350" value="100"> kW</label>
+          <label>Prise normale <input id="acmax" type="number" inputmode="decimal" step="0.1" min="2" max="22" value="11"> kW</label>
+        </div>
+      </div>
       <div class="row r2">
-        <div><label class="lbl" for="conso">Conso (L/100)</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
+        <div><label class="lbl" for="conso" id="consoLbl">Conso (L/100)</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"></div>
         <div><button type="button" class="primary" id="carOk">Valider</button></div>
       </div>
     </div>
   </section>
 
-  <section class="card" id="addrCard">
-    <div class="addrrow">
-      <input id="addr" list="addrList" placeholder="Adresse ou ville" autocomplete="off" enterkeyhint="search" aria-label="Adresse"><datalist id="addrList"></datalist>
-      <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle">📍</button>
-    </div>
-    <p id="addrNote" class="addrnote" role="alert"></p>
-    <span class="lbl" style="margin-top:10px">Rayon</span>
+  <section class="card" id="mainCard">
+    <span class="lbl">Rayon</span>
     <select id="radius" data-pills aria-label="Rayon"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="15">15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select>
-    <div class="chips">
-      <label class="chip"><input type="checkbox" id="roundtrip" checked>Aller-retour</label>
-      <label class="chip"><input type="checkbox" id="notoll">Sans péage</label>
+    <p id="where" class="where"></p>
+    <div id="addrCard" hidden>
+      <div class="addrrow">
+        <input id="addr" list="addrList" placeholder="Adresse ou ville" autocomplete="off" enterkeyhint="search" aria-label="Adresse"><datalist id="addrList"></datalist>
+        <button id="geo" type="button" title="Ma position actuelle" aria-label="Ma position actuelle">📍</button>
+      </div>
+      <p id="addrNote" class="addrnote" role="alert"></p>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" id="roundtrip" checked>Aller-retour</label>
+        <label class="chip"><input type="checkbox" id="notoll">Sans péage</label>
+      </div>
     </div>
   </section>
 
-  <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
+  <div class="gorow">
+    <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
+    <button id="more" type="button" aria-expanded="false" aria-controls="addrCard" title="Plus de détails">Détails</button>
+  </div>
   <div id="prog" class="prog"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
   <p id="status"></p>
   <div id="geohelp" class="geohelp"></div>
@@ -213,15 +250,16 @@ select[data-pills]{position:absolute;opacity:0;pointer-events:none;width:1px;hei
   <div id="map"></div>
 
   <section class="card" id="resultsPanel" style="display:none">
-    <h2>Toutes les stations</h2>
+    <h2 id="resTitle">Toutes les stations</h2>
+    <select id="evSort" data-pills aria-label="Trier"><option value="time" selected>Plus rapide</option><option value="cost">Moins cher</option></select>
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
-    <p class="muted">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
+    <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123m</p>
+  <p class="muted" style="text-align:center">Version 20261123o</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123m"></script>
-<script src="app.js?v=20261123m"></script>
+<script src="cars.js?v=20261123o"></script>
+<script src="app.js?v=20261123o"></script>
 </body>
 </html>

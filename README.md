@@ -15,6 +15,12 @@ Application web qui trouve **la station la plus rentable** autour de vous, en te
 
 Les stations sont classées de la plus rentable à la moins rentable, avec une carte et un lien d'itinéraire.
 
+## Voiture électrique
+
+Si la voiture choisie est électrique, l'app cherche les **bornes de recharge** compatibles autour de vous, calcule le **temps de charge** (batterie, puissance de la borne et de la voiture, ralentissement au-delà de 80 %), affiche le prix quand l'opérateur le publie, et liste **ce qu'il y a à faire à côté** pendant la charge (cafés, restaurants, boulangeries, supermarchés, parcs, toilettes…).
+
+Les bornes viennent de la base nationale IRVE (data.gouv.fr), préparée chaque lundi par la tâche `irve.yml` dans `irve/`.
+
 ## Sources de données (gratuites, sans clé)
 
 - Prix : [prix-carburants.gouv.fr](https://www.prix-carburants.gouv.fr/) via l'API data.economie.gouv.fr (flux instantané)
