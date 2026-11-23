@@ -23,7 +23,7 @@ ALIASES = {
     "bp": "BP", "shell": "Shell", "avia": "Avia", "agip": "Agip", "eni": "Eni", "dyneff": "Dyneff",
     "intermarche": "Intermarché", "intermarché": "Intermarché", "carrefour": "Carrefour",
     "carrefour market": "Carrefour Market", "carrefour contact": "Carrefour Contact", "carrefour express": "Carrefour Express",
-    "super u": "Super U", "hyper u": "Hyper U", "u express": "U Express", "système u": "Système U", "systeme u": "Système U",
+    "u": "Système U", "super u": "Super U", "hyper u": "Hyper U", "u express": "U Express", "système u": "Système U", "systeme u": "Système U",
     "auchan": "Auchan", "casino": "Casino", "géant casino": "Géant Casino", "netto": "Netto", "cora": "Cora",
     "leader price": "Leader Price", "simply market": "Simply Market", "spar": "Spar", "vito": "Vito",
 }
