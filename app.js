@@ -145,21 +145,29 @@ function haversine(a,b){
   return 2*R*Math.asin(Math.sqrt(h));
 }
 async function fetchStations(o, fuel, radius){
-  const base = `${API}?limit=100&where=${encodeURIComponent(`within_distance(geom, geom'POINT(${o.lon} ${o.lat})', ${radius}km)`)}`;
-  let r = await fetch(base + encodeURIComponent(` and ${fuel}_prix is not null`));
-  if(!r.ok) r = await fetch(base);
-  if(!r.ok) throw new Error("Le service des prix ne répond pas ("+r.status+").");
-  const data = await r.json();
-  return (data.results||[]).map(s=>{
+  const zone = r => `within_distance(geom, geom'POINT(${o.lon} ${o.lat})', ${r}km)`;
+  const get = async (where, extra="") => {
+    let r = await fetch(`${API}?limit=100${extra}&where=${encodeURIComponent(where+` and ${fuel}_prix is not null`)}`);
+    if(!r.ok) r = await fetch(`${API}?limit=100${extra}&where=${encodeURIComponent(where)}`);
+    if(!r.ok) throw new Error("Le service des prix ne répond pas ("+r.status+").");
+    return (await r.json()).results||[];
+  };
+  // 1) les 100 moins chères du rayon  2) toutes les stations proches (jusqu'à 10 km)
+  const [cheap, near] = await Promise.all([
+    get(zone(radius), `&order_by=${encodeURIComponent(fuel+"_prix asc")}`).catch(()=>get(zone(radius))),
+    get(zone(Math.min(radius,10)))
+  ]);
+  const seen = new Set();
+  return [...cheap,...near].filter(s=>!seen.has(s.id)&&seen.add(s.id)).map(s=>{
     const lat = s.geom?.lat ?? (+s.latitude/100000), lon = s.geom?.lon ?? (+s.longitude/100000);
     return {id:s.id, adresse:s.adresse, ville:s.ville, cp:s.cp, lat, lon, price:+s[fuel+"_prix"], maj:s[fuel+"_maj"]};
   }).filter(s=>s.price>0 && isFinite(s.lat));
 }
 // Enseignes : OpenStreetMap (le flux officiel ne donne pas le nom de la station)
-async function addBrands(o, list, radius){
+async function addBrands(o, list){
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 9000);
   try{
-    const q = `[out:json][timeout:20];nwr["amenity"="fuel"](around:${Math.round(radius*1000+500)},${o.lat},${o.lon});out center tags;`;
+    const q = `[out:json][timeout:20];(${list.map(s=>`nwr["amenity"="fuel"](around:250,${s.lat.toFixed(5)},${s.lon.toFixed(5)});`).join("")});out center tags;`;
     const r = await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrl.signal}).then(r=>r.json());
     const osm = (r.elements||[]).map(e=>({lat:e.lat??e.center?.lat, lon:e.lon??e.center?.lon, name:e.tags?.brand||e.tags?.name||e.tags?.operator})).filter(e=>e.name&&e.lat);
     list.forEach(s=>{
@@ -198,7 +206,7 @@ async function search(){
     const est = s => s.price*(liters + (rt?2:1)*s.km*conso/100);
     st.sort((a,b)=>est(a)-est(b)); st = st.slice(0,40);
     setStatus("Calcul des distances par la route et recherche des enseignes…");
-    await Promise.all([roadDistances(origin, st), addBrands(origin, st, radius)]);
+    await Promise.all([roadDistances(origin, st), addBrands(origin, st)]);
     st.forEach(s=>{
       s.tripKm = (rt?2:1)*s.km;
       s.tripCost = s.tripKm*conso/100*s.price;
