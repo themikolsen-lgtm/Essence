@@ -650,13 +650,14 @@ function render(st, o){
   $("resTitle").textContent = "Toutes les stations";
   $("evSort").nextElementSibling.style.display = "none";
   $("resNote").textContent = "Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).";
-  $("rows").onclick = null;
+  $("rows").onclick = null; // (boutons gérés plus bas)
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}" style="animation-delay:${Math.min(i,10)*30}ms">
     <td data-l="Rang">${avatar(s.brand||sName(s))}<span class="rk">${i+1}</span></td>
     <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><div class="sub">${esc(s.adresse)}, ${esc(s.ville)}</div>
       <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div>${s.maj?`<div class="when">prix du ${new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</div>`:""}</td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
-    <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
+    <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td>
+    <td class="ract"><div class="racts"><button type="button" data-map="${i}">${ICON.pin}Voir sur la carte</button><a href="${nav(s)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div></td></tr>`).join("");
   showResults(st);
   if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
   render.done = true;
@@ -678,6 +679,20 @@ function showResults(st){
   if(VIEW==="map"){ $("resultsPanel").style.display="none"; try{ drawMap(st); }catch(e){} }
   else { $("resultsPanel").style.display="block"; }
 }
+let MARKERS = [], FOCUS = null;
+function focusStation(i){
+  FOCUS = i; setView("map");
+  setTimeout(()=>{ try{ $("viewSw").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }, 50);
+  applyFocus();
+}
+function applyFocus(){
+  if(FOCUS==null || !map || !MARKERS[FOCUS] || !LAST || !LAST[FOCUS]) return;
+  const s = LAST[FOCUS], m = MARKERS[FOCUS];
+  map.setView([s.lat, s.lon], 16, {animate:true});
+  setTimeout(()=>{ try{ m.openPopup(); }catch(e){} }, 300);
+  FOCUS = null;
+}
+$("rows").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-map]"); if(b){ ev.stopPropagation(); focusStation(+b.dataset.map); } });
 let leafletP = null;
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
@@ -706,15 +721,17 @@ function drawMap(st){
   L.marker([origin.lat,origin.lon],{icon:L.divIcon({className:"pin", html:`<span class="me"></span>`, iconSize:[0,0]}), zIndexOffset:-100, keyboard:false})
     .bindPopup(`<b>Vous êtes ici</b><br>${esc(origin.label||"")}`).addTo(layer);
   // stations : bulle avec pastille d'enseigne + prix (ou temps de charge), la meilleure en vert
+  MARKERS = [];
   st.forEach((s,i)=>{
     const name = s.ch ? evName(s) : (s.brand || sName(s));
     const val = s.ch ? fmtMin(s.ch.min) : `${fmt(s.price,3)} €`;
     const html = `<div class="pinw${i?"":" best"}" style="z-index:${i?1:2}">${avatar(name)}<b>${val}</b>${i?`<small>${i+1}</small>`:`<small>★</small>`}</div>`;
-    L.marker([s.lat,s.lon],{icon:L.divIcon({className:"pin", html, iconSize:[0,0]}), zIndexOffset: i?(-i):1000, riseOnHover:true, title:name})
+    MARKERS[i] = L.marker([s.lat,s.lon],{icon:L.divIcon({className:"pin", html, iconSize:[0,0]}), zIndexOffset: i?(-i):1000, riseOnHover:true, title:name})
       .bindPopup(s.popup || `<b>${i+1}. ${esc(sName(s))}</b><br>${esc(s.adresse)}, ${esc(s.ville)}<br>${fmt(s.price,3)} €/L – total ${fmt(s.total)} €`, {offset:[0,-34]}).addTo(layer);
   });
   map.invalidateSize();
   map.fitBounds(L.latLngBounds([[origin.lat,origin.lon],...st.map(s=>[s.lat,s.lon])]).pad(0.15), {maxZoom:15});
+  applyFocus();
 }
 
 // =====================================================================
@@ -848,7 +865,8 @@ function renderEV(st, ctx, rt){
       <div class="meta"><span>${fmt(s.p,0)} kW</span><span>${esc(plugs(s))}</span><span>${fmt(s.km,1)} km</span><span>${s.q} point${s.q>1?"s":""} de charge</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}<span>${esc(costTxt(s))}</span></div>
       <button type="button" class="nearbtn" data-i="${i}">☕ Que faire à côté ?</button><div class="near"></div></td>
     <td class="n" data-l="Coût total"><b>${fmtMin(s.ch.min)}</b></td>
-    <td class="n" data-l="Écart">${s.cost!=null?fmt(s.cost,0)+" €":(s.g?"0 €":"? €")}</td></tr>`).join("");
+    <td class="n" data-l="Écart">${s.cost!=null?fmt(s.cost,0)+" €":(s.g?"0 €":"? €")}</td>
+    <td class="ract"><div class="racts"><button type="button" data-map="${i}">${ICON.pin}Voir sur la carte</button><a href="${nav(s)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div></td></tr>`).join("");
   $("rows").onclick = ev => { const b=ev.target.closest(".nearbtn"); if(!b) return; b.disabled=true; loadNearby(st[+b.dataset.i], b.nextElementSibling).then(()=>b.remove()); };
   st.forEach((s,i)=>{ s.popup = `<b>${i+1}. ${esc(evName(s))}</b><br>${esc(s.a)}<br>${fmt(s.p,0)} kW – charge ${fmtMin(s.ch.min)}`; });
   showResults(st);

@@ -513,6 +513,17 @@ main{gap:12px;padding-left:12px;padding-right:12px}
 .kpis{gap:10px}
 .saved.foot{margin-top:4px}
 .chip:has(input:checked){box-shadow:none!important}
+
+/* Boutons d'action dans chaque ligne de la liste */
+.racts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.racts button,.racts a{display:inline-flex;align-items:center;gap:6px;width:auto;min-height:40px;padding:0 14px;border-radius:999px;background:var(--bg);color:var(--ink);font-size:13px;font-weight:800;text-decoration:none}
+.racts .i{width:16px;height:16px}
+.racts a{background:var(--ink);color:var(--bg)}
+tr.top .racts button{background:#fff;color:#14181f}
+.stack td.ract{grid-column:1/-1;padding:0!important}
+.racts{display:grid;grid-template-columns:1fr 1fr;margin-top:10px}
+.racts button,.racts a{justify-content:center;width:100%}
+.racts a,td[data-l="Station"] .racts a{color:var(--bg)!important}
 [hidden]{display:none!important}
 
 /* Repères de la carte */
@@ -653,7 +664,7 @@ main{gap:12px;padding-left:12px;padding-right:12px}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231611</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · v202611231613</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -711,10 +722,10 @@ main{gap:12px;padding-left:12px;padding-right:12px}
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611231611"></script>
-<script src="app.js?v=202611231611"></script>
-<script src="carnet.js?v=202611231611"></script>
-<script src="firebase-config.js?v=202611231611"></script>
-<script type="module" src="compte.js?v=202611231611"></script>
+<script src="cars.js?v=202611231613"></script>
+<script src="app.js?v=202611231613"></script>
+<script src="carnet.js?v=202611231613"></script>
+<script src="firebase-config.js?v=202611231613"></script>
+<script type="module" src="compte.js?v=202611231613"></script>
 </body>
 </html>
