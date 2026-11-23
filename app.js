@@ -106,6 +106,16 @@ if(p){
 }
 updQ();
 
+let pTimer;
+function progress(pct, txt){
+  clearTimeout(pTimer);
+  const busy = pct!=null && pct<100;
+  $("prog").classList.toggle("on", pct!=null);
+  $("go").classList.toggle("busy", busy); $("go").disabled = busy;
+  $("golbl").textContent = busy ? "Recherche en cours…" : "Trouver la station la plus rentable";
+  if(pct!=null){ $("pbar").style.width = pct+"%"; $("ptxt").textContent = txt||""; }
+  if(pct===100) pTimer = setTimeout(()=>progress(null), 900);
+}
 function setStatus(msg, err){ $("status").textContent = msg; $("status").className = err?"err":""; }
 
 // ---------- adresse ----------
@@ -128,12 +138,12 @@ async function geocode(q){
 }
 $("geo").addEventListener("click", ()=>{
   if(!navigator.geolocation) return setStatus("La géolocalisation n'est pas disponible sur cet appareil.", true);
-  setStatus("Recherche de votre position…");
+  setStatus("Recherche de votre position…"); progress(5,"Localisation…");
   navigator.geolocation.getCurrentPosition(pos=>{
     origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"};
     $("addr").value = ""; $("addr").placeholder = "📍 Position actuelle utilisée";
     search();
-  }, err=>setStatus("Impossible d'obtenir votre position ("+err.message+"). Tapez une adresse à la place.", true), {enableHighAccuracy:true,timeout:15000});
+  }, err=>{ progress(null); setStatus("Impossible d'obtenir votre position ("+err.message+"). Tapez une adresse à la place.", true); }, {enableHighAccuracy:true,timeout:15000});
 });
 $("go").addEventListener("click", search);
 $("addr").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
@@ -208,15 +218,15 @@ async function search(){
     if(!origin){
       const q=$("addr").value.trim();
       if(!q) return setStatus("Tapez une adresse ou utilisez « Ma position actuelle ».", true);
-      setStatus("Recherche de l'adresse…"); origin = await geocode(q);
+      setStatus(""); progress(15,"Recherche de l'adresse…"); origin = await geocode(q);
     }
-    setStatus(`Recherche des stations ${FUELS[fuel]} dans un rayon de ${radius} km…`);
+    setStatus(""); progress(35,`Prix ${FUELS[fuel]} dans un rayon de ${radius} km…`);
     let st = await fetchStations(origin, fuel, radius);
-    if(!st.length) return setStatus(`Aucune station ne vend du ${FUELS[fuel]} dans un rayon de ${radius} km. Essayez un rayon plus grand.`, true);
+    if(!st.length){ progress(null); return setStatus(`Aucune station ne vend du ${FUELS[fuel]} dans un rayon de ${radius} km. Essayez un rayon plus grand.`, true); }
     st.forEach(s=>{ s.km = haversine(origin,s)*1.3; s.min = s.km/50*60; s.road=false; });
     const est = s => s.price*(liters + (rt?2:1)*s.km*conso/100);
     st.sort((a,b)=>est(a)-est(b)); st = st.slice(0,40);
-    setStatus("Calcul des distances par la route et recherche des enseignes…");
+    progress(65,"Distances par la route et enseignes…");
     await Promise.all([roadDistances(origin, st), addBrands(origin, st)]);
     st.forEach(s=>{
       s.tripKm = (rt?2:1)*s.km;
@@ -224,9 +234,11 @@ async function search(){
       s.total = liters*s.price + s.tripCost;
     });
     st.sort((a,b)=>a.total-b.total);
+    progress(95,"Calcul du plus rentable…");
     render(st, {fuel,liters,rt});
+    progress(100,"Terminé ✓");
     setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
-  }catch(e){ setStatus(e.message||"Une erreur est survenue.", true); }
+  }catch(e){ progress(null); setStatus(e.message||"Une erreur est survenue.", true); }
 }
 
 const sName = s => s.brand ? "Station "+s.brand : "Station "+(s.ville||"");
