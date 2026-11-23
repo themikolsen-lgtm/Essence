@@ -122,7 +122,7 @@ function setStatus(msg, err){ $("status").textContent = msg; $("status").classNa
 let tAddr;
 $("addr").addEventListener("input", ()=>{
   clearTimeout(tAddr); origin = null;
-  const q = $("addr").value.trim(); if(q.length<4) return;
+  const q = $("addr").value.trim(); if(q.length<4 || q.startsWith("📍")) return;
   tAddr = setTimeout(async()=>{
     try{
       const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`).then(r=>r.json());
@@ -136,15 +136,60 @@ async function geocode(q){
   const [lon,lat] = r.features[0].geometry.coordinates;
   return {lat,lon,label:r.features[0].properties.label};
 }
-$("geo").addEventListener("click", ()=>{
-  if(!navigator.geolocation) return setStatus("La géolocalisation n'est pas disponible sur cet appareil.", true);
-  setStatus("Recherche de votre position…"); progress(5,"Localisation…");
-  navigator.geolocation.getCurrentPosition(pos=>{
-    origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"};
-    $("addr").value = ""; $("addr").placeholder = "📍 Position actuelle utilisée";
-    search();
-  }, err=>{ progress(null); setStatus("Impossible d'obtenir votre position ("+err.message+"). Tapez une adresse à la place.", true); }, {enableHighAccuracy:true,timeout:15000});
-});
+// ---------- localisation ----------
+const UA = navigator.userAgent;
+const IS_IOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const IS_ANDROID = /Android/.test(UA);
+const IN_APP = /FBAN|FBAV|Instagram|Line\/|Snapchat|GSA\/|; wv\)|LinkedInApp|TikTok|musical_ly/.test(UA);
+function geoHelp(kind){
+  let h = "";
+  if(kind==="insecure") h = `<b>La localisation ne marche qu'en https.</b> Ouvrez l'adresse <b>https://themikolsen-lgtm.github.io/Essence/</b>.`;
+  else if(IN_APP) h = `<b>Vous êtes dans le navigateur intégré d'une application</b>, qui bloque souvent la localisation. Ouvrez la page dans ${IS_IOS?"<b>Safari</b>":"<b>Chrome</b>"} (menu ⋯ → « Ouvrir dans le navigateur »).`;
+  else if(kind==="denied" && IS_IOS) h = `<b>La localisation est refusée sur cet iPhone.</b> Pour l'autoriser :<ol>
+    <li>Réglages → <b>Confidentialité et sécurité</b> → <b>Service de localisation</b> : activé.</li>
+    <li>Dans la même liste, <b>Sites web Safari</b> (ou Chrome) → <b>Lorsque l'app est active</b>, et activez <b>Position exacte</b>.</li>
+    <li>Dans Safari, touchez <b>aA</b> (ou ⋯) à gauche de l'adresse → <b>Réglages du site web</b> → <b>Localisation : Autoriser</b>.</li>
+    <li>Rechargez la page et touchez à nouveau « Ma position actuelle ».</li></ol>`;
+  else if(kind==="denied" && IS_ANDROID) h = `<b>La localisation est refusée sur ce téléphone.</b> Pour l'autoriser :<ol>
+    <li>Tirez le volet du haut et activez <b>Localisation</b>.</li>
+    <li>Dans Chrome, touchez l'icône à gauche de l'adresse (⚙ ou cadenas) → <b>Autorisations</b> → <b>Position : Autoriser</b>.</li>
+    <li>Si besoin : Paramètres → Applications → <b>Chrome</b> → Autorisations → <b>Position : Autoriser</b>.</li>
+    <li>Rechargez la page et touchez à nouveau « Ma position actuelle ».</li></ol>`;
+  else if(kind==="denied") h = `<b>La localisation est refusée par le navigateur.</b> Cliquez sur l'icône à gauche de l'adresse → Localisation → Autoriser, puis rechargez la page.`;
+  else h = `<b>Le téléphone n'a pas réussi à trouver votre position</b> (GPS ou réseau indisponible). Vérifiez que la localisation est activée, approchez-vous d'une fenêtre, ou tapez simplement votre adresse.`;
+  $("geohelp").innerHTML = h + `<div class="muted" style="margin-top:6px">En attendant, vous pouvez taper votre adresse ou votre ville juste au-dessus.</div>`;
+  $("geohelp").classList.add("on");
+}
+const getPos = opts => new Promise((ok,ko)=>navigator.geolocation.getCurrentPosition(ok,ko,opts));
+async function locate(){
+  $("geohelp").classList.remove("on");
+  if(!window.isSecureContext) return geoHelp("insecure");
+  if(!navigator.geolocation) return geoHelp("unavailable");
+  setStatus(""); progress(5,"Localisation en cours… (acceptez la demande si le téléphone la propose)");
+  let pos;
+  try{
+    // 1) position rapide (wifi / réseau), acceptée jusqu'à 10 min d'ancienneté
+    pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
+  }catch(e){
+    if(e.code===1){ progress(null); return geoHelp("denied"); }
+    try{
+      // 2) GPS précis, plus lent
+      progress(8,"Recherche du signal GPS…");
+      pos = await getPos({enableHighAccuracy:true, timeout:25000, maximumAge:0});
+    }catch(e2){ progress(null); return geoHelp(e2.code===1?"denied":"unavailable"); }
+  }
+  origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"};
+  try{
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${origin.lon}&lat=${origin.lat}&limit=1`).then(r=>r.json());
+    const lbl = r.features?.[0]?.properties?.label;
+    if(lbl){ origin.label = lbl; $("addr").value = "📍 "+lbl; }
+    else $("addr").value = "📍 Ma position";
+  }catch(e){ $("addr").value = "📍 Ma position"; }
+  search();
+}
+$("geo").addEventListener("click", locate);
+// si l'utilisateur modifie le champ, on oublie la position GPS
+$("addr").addEventListener("focus", ()=>{ if($("addr").value.startsWith("📍")){ $("addr").value=""; origin=null; } });
 $("go").addEventListener("click", search);
 $("addr").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
 

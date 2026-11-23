@@ -2,220 +2,130 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Essence</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Essence">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essence – le plein le plus rentable</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-512.png">
 <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e6261f">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{
-  color-scheme:light dark;
-  --bg:#f2f2f7; --ink:#000; --label2:rgba(60,60,67,.6); --sep:rgba(60,60,67,.18);
-  --glass:rgba(255,255,255,.55); --glass-strong:rgba(255,255,255,.72); --edge:rgba(255,255,255,.9); --fill:rgba(118,118,128,.12);
-  --blue:#007aff; --green:#34c759; --orange:#ff9500; --red:#ff3b30;
-  --r:26px; --shadow:0 8px 32px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
-  --safe-b:env(safe-area-inset-bottom,0px);
-}
-@media (prefers-color-scheme:dark){:root{
-  --bg:#000; --ink:#fff; --label2:rgba(235,235,245,.6); --sep:rgba(84,84,88,.55);
-  --glass:rgba(40,40,46,.55); --glass-strong:rgba(44,44,50,.78); --edge:rgba(255,255,255,.14); --fill:rgba(118,118,128,.24);
-  --blue:#0a84ff; --green:#30d158; --orange:#ff9f0a; --red:#ff453a; --shadow:0 8px 32px rgba(0,0,0,.5);
-}}
-*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg)}
-body{margin:0;color:var(--ink);font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip;min-height:100vh;
-  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) 0 env(safe-area-inset-left,0)}
-/* fond coloré flou derrière le verre */
-.aurora{position:fixed;inset:-20vmax;z-index:-1;pointer-events:none;filter:blur(70px);opacity:.55}
-.aurora i{position:absolute;border-radius:50%}
-.aurora i:nth-child(1){width:55vmax;height:55vmax;left:0;top:0;background:#ff9500}
-.aurora i:nth-child(2){width:50vmax;height:50vmax;right:5vmax;top:20vmax;background:#ff2d55}
-.aurora i:nth-child(3){width:45vmax;height:45vmax;left:20vmax;bottom:0;background:#007aff;opacity:.7}
-@media (prefers-color-scheme:dark){.aurora{opacity:.35}}
-
-.wrap{max-width:720px;margin:0 auto;padding:0 16px calc(130px + var(--safe-b))}
-.large{font-size:34px;font-weight:700;letter-spacing:.01em;line-height:1.1;margin:18px 4px 2px}
-.sub{color:var(--label2);font-size:15px;margin:0 4px 18px}
-
-.glass{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
-  border-radius:var(--r);box-shadow:var(--shadow),inset 0 1px 0 var(--edge),inset 0 0 0 .5px var(--edge)}
-.sect{margin:0 0 22px}
-.sect>h2{font-size:13px;font-weight:400;color:var(--label2);text-transform:none;margin:0 20px 7px}
-.foot{font-size:13px;color:var(--label2);margin:7px 20px 0}
-
-/* cellules type Réglages */
-.cell{display:flex;align-items:center;gap:12px;padding:12px 18px;min-height:52px;position:relative}
-.cell+.cell::before{content:"";position:absolute;top:0;left:18px;right:0;border-top:.5px solid var(--sep)}
-.cell>label,.cell>.k{flex:1;font-size:17px;color:var(--ink);margin:0}
-.cell input,.cell select{flex:0 1 150px;text-align:right;border:0;background:transparent;color:var(--label2);font:inherit;font-size:17px;min-height:36px;padding:0;-webkit-appearance:none;appearance:none}
-.cell select{direction:rtl;cursor:pointer}
-.cell select option{direction:ltr}
-.cell input:focus,.cell select:focus{outline:none;color:var(--blue)}
-.cell .unit{color:var(--label2)}
-.ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;color:#fff;font-size:16px}
-.chev::after{content:"›";color:var(--label2);font-size:22px;margin-left:4px}
-
-/* recherche */
-.searchbar{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:14px;padding:0 12px;margin:14px 14px 4px;min-height:46px}
-.searchbar svg{flex:none;opacity:.55}
-.searchbar input{flex:1;border:0;background:transparent;font:inherit;font-size:17px;color:var(--ink);min-height:44px;outline:none}
-.searchbar input::placeholder{color:var(--label2)}
-.hits{padding:4px 6px 8px}
-.hits:empty{display:none}
-.hits button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;padding:11px 12px;border-radius:14px;cursor:pointer;min-height:44px}
-.hits button:active{background:var(--fill)}
-.hits button b{font-weight:600}
-.hits p{margin:8px 12px}
-.carcard{display:none;margin:6px 14px 14px;padding:16px 18px;border-radius:20px;background:linear-gradient(135deg,rgba(0,122,255,.16),rgba(0,122,255,.04));border:.5px solid rgba(0,122,255,.3)}
-.carcard .nm{font-size:19px;font-weight:600;line-height:1.25}
-.carcard .cs{font-size:34px;font-weight:700;color:var(--blue);line-height:1.1;margin-top:6px;letter-spacing:-.01em}
-
-/* segmenté */
-.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--fill);border-radius:12px;padding:2px;margin:14px;position:relative}
-.seg label{position:relative;display:flex;justify-content:center;align-items:center;min-height:38px;font-size:15px;font-weight:500;border-radius:10px;cursor:pointer;margin:0;color:var(--ink)}
-.seg input{position:absolute;opacity:0;pointer-events:none}
-.seg label:has(input:checked){background:var(--glass-strong);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
-.out{font-weight:600;color:var(--ink)}
-
-/* interrupteur iOS */
-.switch{position:relative;width:51px;height:31px;flex:none}
-.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1;min-height:0}
-.switch span{position:absolute;inset:0;border-radius:31px;background:var(--fill);transition:background .25s}
-.switch span::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .25s}
-.switch input:checked+span{background:var(--green)}
-.switch input:checked+span::after{transform:translateX(20px)}
-.switch input:focus-visible+span{outline:3px solid var(--blue);outline-offset:2px}
-
-.addr{flex:1;border:0;background:transparent;font:inherit;font-size:17px;color:var(--ink);min-height:44px;outline:none}
-.addr::placeholder{color:var(--label2)}
-.linkbtn{border:0;background:transparent;color:var(--blue);font:inherit;font-size:17px;padding:0;min-height:44px;cursor:pointer;text-align:left;flex:1}
-
-/* barre d'action flottante */
-.dock{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(14px + var(--safe-b));display:flex;justify-content:center;pointer-events:none;z-index:1000}
-.dockin{width:min(688px,100%);pointer-events:auto}
-.dock button{pointer-events:auto;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border:0;border-radius:28px;font:inherit;font-size:17px;font-weight:600;color:#fff;cursor:pointer;
-  background:linear-gradient(180deg,rgba(10,132,255,.92),rgba(0,100,230,.92));-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-  box-shadow:0 10px 30px rgba(0,122,255,.35),inset 0 1px 0 rgba(255,255,255,.45)}
-.dock button:active{transform:scale(.98)}
-.prog{display:none;margin:0 6px 10px;padding:12px 16px;border-radius:20px;background:var(--glass-strong);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);box-shadow:var(--shadow),inset 0 1px 0 var(--edge)}
-.prog.on{display:block}
-.ptxt{font-size:14px;color:var(--ink);margin-bottom:8px}
-.ptrack{height:6px;border-radius:3px;background:var(--fill);overflow:hidden}
-.pbar{height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width .5s ease;position:relative;overflow:hidden}
-.pbar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);animation:shine 1.2s linear infinite}
+:root{color-scheme:light dark;--bg:light-dark(#fff,#0e1116);--ink:light-dark(#111,#eef1f5);--muted:light-dark(#5b6270,#9aa3b2);--line:light-dark(#e4e7ec,#252b36);--card:light-dark(#f6f7f9,#161b23);--red:#e6261f;--blue:#0a5cff;--amber:#ffb400;--green:#00a05a}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif}
+header{background:var(--red);color:#fff;padding:20px max(5vw,16px)}
+header h1{margin:0;font-size:clamp(26px,5vw,40px);font-weight:800;line-height:1.05}
+header p{margin:6px 0 0;opacity:.9}
+main{max-width:1100px;margin:0 auto;padding:20px max(4vw,16px) 60px;display:grid;gap:20px}
+.panel{background:var(--card);border-radius:14px;padding:18px}
+.panel h2{margin:0 0 12px;font-size:19px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+input,select,button{font:inherit;font-size:16px;min-height:44px;border-radius:10px;border:1px solid var(--line);padding:8px 12px;background:var(--bg);color:var(--ink);width:100%}
+input:focus,select:focus,button:focus{outline:3px solid var(--blue);outline-offset:1px}
+button{cursor:pointer;font-weight:600}
+.primary{background:var(--blue);color:#fff;border:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row>*{flex:1 1 200px}
+.check{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px}
+.check input{width:22px;min-height:22px}
+.hits{display:grid;gap:6px;margin-top:8px}
+.hits button{text-align:left;font-weight:400;min-height:44px}
+.hits button b{font-weight:700}
+.carcard{display:none;margin-top:12px;border-left:6px solid var(--blue);background:var(--bg);border-radius:10px;padding:12px 14px}
+.carcard .nm{font-size:20px;font-weight:800;line-height:1.2}
+.carcard .cs{font-size:30px;font-weight:800;color:var(--blue);line-height:1.1;margin-top:4px}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.seg label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--ink);font-size:16px;margin:0;cursor:pointer;background:var(--bg)}
+.seg input{width:20px;min-height:20px}
+.out{font-size:24px;font-weight:800;min-height:44px;display:flex;align-items:center}
+#status{color:var(--muted);min-height:1.5em}
+.prog{display:none;margin-top:12px}.prog.on{display:block}
+.ptxt{font-size:14px;color:var(--muted);margin-bottom:6px}
+.ptrack{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.pbar{height:100%;width:0;background:var(--blue);border-radius:5px;transition:width .5s ease;position:relative;overflow:hidden}
+.pbar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:shine 1.2s linear infinite}
 @keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
-.spin{display:none;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;animation:rot .8s linear infinite}
+.spin{display:none;width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;animation:rot .8s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes rot{to{transform:rotate(360deg)}}
-.dock button.busy{opacity:.85;cursor:default}
-.dock button.busy .spin{display:block}
-#status{color:var(--label2);font-size:14px;margin:8px 20px 0;min-height:1.3em}
+#go.busy .spin{display:inline-block}#go.busy{opacity:.85}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.meta span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:13px;white-space:nowrap}
+.geohelp{display:none;margin-top:10px;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:15px}
+.geohelp.on{display:block}.geohelp ol{margin:6px 0 0;padding-left:20px}.geohelp li{margin:3px 0}
 #status.err{color:var(--red)}
-
-/* résultat principal */
-.best{display:none;margin-bottom:22px;padding:22px;border-radius:30px;color:#fff;overflow:hidden;position:relative;
-  background:linear-gradient(150deg,#30d158,#0a9f4a 60%,#07813c);box-shadow:0 14px 40px rgba(52,199,89,.35),inset 0 1px 0 rgba(255,255,255,.5)}
-.best::before{content:"";position:absolute;inset:0 0 55% 0;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent);pointer-events:none}
-.best .big{font-size:clamp(28px,8vw,40px);font-weight:700;line-height:1.1;letter-spacing:-.01em}
-.best a{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:22px;background:rgba(255,255,255,.25);color:#fff;text-decoration:none;font-weight:600;
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
-.best b{font-weight:700}
-#map{height:300px;border-radius:var(--r);display:none;margin-bottom:22px;overflow:hidden;box-shadow:var(--shadow)}
-
-/* liste des stations (rendu en table par le script, affiché en cellules) */
-#resultsPanel{display:none}
-table{width:100%;border-collapse:collapse}
-thead{display:none}
-tbody tr{display:grid;grid-template-columns:34px 1fr auto;column-gap:10px;padding:14px 18px;position:relative;align-items:start}
-tbody tr+tr::before{content:"";position:absolute;top:0;left:62px;right:0;border-top:.5px solid var(--sep)}
-tbody td{padding:0;border:0;font-size:15px}
-td[data-l="Rang"]{grid-row:1/3;width:28px;height:28px;border-radius:50%;background:var(--fill);display:grid;place-items:center;font-size:14px;font-weight:600}
-tr.top td[data-l="Rang"]{background:var(--green);color:#fff}
-td[data-l="Station"]{grid-column:2;font-size:15px;line-height:1.3}
-td[data-l="Station"] a{color:var(--ink);text-decoration:none}
-td[data-l="Station"] b{font-size:17px;font-weight:600}
-td[data-l="Coût total"]{grid-column:3;grid-row:1;text-align:right;font-size:17px}
-td[data-l="Écart"]{grid-column:3;grid-row:2;text-align:right;color:var(--red);font-size:14px}
-tr.top td[data-l="Écart"]{color:var(--green)}
-.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.meta span{background:var(--fill);border-radius:10px;padding:3px 9px;font-size:13px;white-space:nowrap;color:var(--ink)}
-.meta span:first-child{background:rgba(255,149,0,.18)}
-.n{white-space:nowrap}
-.muted{color:var(--label2);font-size:13px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (prefers-reduced-transparency:reduce){.glass{background:var(--glass-strong);-webkit-backdrop-filter:none;backdrop-filter:none}}
+.best{background:var(--green);color:#fff;border-radius:14px;padding:18px;display:none}
+.best .big{font-size:clamp(28px,6vw,44px);font-weight:800;line-height:1.1}
+.best a{color:#fff}
+#map{height:380px;border-radius:14px;display:none}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.top td{background:light-dark(#e6f6ee,#10281c)}
+.muted{color:var(--muted);font-size:13px}
+@media(max-width:640px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{border:0;padding:2px 0;text-align:left}.stack td::before{content:attr(data-l)" : ";color:var(--muted)}.stack td[data-l="Station"]::before,.stack td[data-l="Rang"]::before{content:none}.stack td[data-l="Rang"]{font-weight:800}}
 </style>
 </head>
 <body>
-<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
-<div class="wrap">
-  <h1 class="large">Essence</h1>
-  <p class="sub">Le plein le moins cher, trajet compris.</p>
+<header>
+  <h1>Où faire le plein ?</h1>
+  <p>Le prix affiché ne suffit pas : on compte aussi le carburant brûlé pour aller à la station.</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>1. Votre voiture</h2>
+    <label for="carq">Tapez votre voiture : marque, modèle, motorisation, année</label>
+    <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016  ·  208 puretech 2020  ·  golf 7 tdi" autocomplete="off">
+    <div id="carHits" class="hits"></div>
+    <div id="carCard" class="carcard"></div>
+    <div class="grid" style="margin-top:12px">
+      <div><label for="fuel">Carburant</label><select id="fuel"></select></div>
+      <div><label for="conso">Consommation (L/100 km) – modifiable</label><input id="conso" type="number" step="0.1" min="2" max="30"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Combien de carburant ?</h2>
+    <div class="seg" role="radiogroup">
+      <label><input type="radio" name="qmode" value="plein" checked> Faire le plein</label>
+      <label><input type="radio" name="qmode" value="litres"> Saisir les litres</label>
+    </div>
+    <div class="grid" id="pleinBox">
+      <div><label for="tank">Taille du réservoir (L)</label><input id="tank" type="number" step="1" min="20" max="120" value="45"></div>
+      <div><label for="gauge">Niveau actuel de la jauge</label><select id="gauge"><option value="0">Réserve (vide)</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select></div>
+      <div><label>Litres à mettre</label><div class="out" id="pleinOut">–</div></div>
+    </div>
+    <div class="grid" id="litresBox" style="display:none">
+      <div><label for="liters">Litres à mettre</label><input id="liters" type="number" step="1" min="1" max="150" value="30"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>2. Où êtes-vous ?</h2>
+    <div class="row">
+      <div><label for="addr">Adresse</label><input id="addr" list="addrList" placeholder="ex. 12 rue de la Paix, Lyon" autocomplete="off"><datalist id="addrList"></datalist></div>
+      <div style="flex:0 1 140px"><label for="radius">Rayon (km)</label><select id="radius"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>30</option><option>50</option><option>75</option><option>100</option></select></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="geo">📍 Ma position actuelle</button>
+      <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
+    </div>
+    <p style="margin:12px 0 0"><label class="check"><input type="checkbox" id="roundtrip" checked> Compter l'aller-retour (je reviens ensuite à mon point de départ)</label></p>
+    <div id="prog" class="prog"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
+    <p id="status"></p>
+    <div id="geohelp" class="geohelp"></div>
+  </section>
 
   <section class="best" id="best"></section>
   <div id="map"></div>
 
-  <section class="sect">
-    <h2>Ma voiture</h2>
-    <div class="glass">
-      <label class="searchbar" for="carq">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input id="carq" type="search" placeholder="clio 4 1.5 dci 2016" autocomplete="off" enterkeyhint="search">
-      </label>
-      <div id="carHits" class="hits"></div>
-      <div id="carCard" class="carcard"></div>
-      <div class="cell"><span class="ic" style="background:var(--orange)">⛽</span><label for="fuel">Carburant</label><select id="fuel"></select></div>
-      <div class="cell"><span class="ic" style="background:var(--blue)">◔</span><label for="conso">Consommation</label><input id="conso" type="number" inputmode="decimal" step="0.1" min="2" max="30"><span class="unit">L/100</span></div>
-    </div>
-    <p class="foot">Tapez la marque, le modèle, le moteur et l'année. La consommation reste modifiable.</p>
-  </section>
-
-  <section class="sect">
-    <h2>Quantité</h2>
-    <div class="glass">
-      <div class="seg" role="radiogroup">
-        <label><input type="radio" name="qmode" value="plein" checked>Faire le plein</label>
-        <label><input type="radio" name="qmode" value="litres">Saisir les litres</label>
-      </div>
-      <div id="pleinBox">
-        <div class="cell"><label for="tank">Réservoir</label><input id="tank" type="number" inputmode="numeric" step="1" min="20" max="120" value="45"><span class="unit">L</span></div>
-        <div class="cell"><label for="gauge">Jauge actuelle</label><select id="gauge"><option value="0">Réserve</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select></div>
-        <div class="cell"><span class="k">À mettre</span><span class="out" id="pleinOut">–</span></div>
-      </div>
-      <div id="litresBox" style="display:none">
-        <div class="cell"><label for="liters">Litres à mettre</label><input id="liters" type="number" inputmode="numeric" step="1" min="1" max="150" value="30"><span class="unit">L</span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="sect">
-    <h2>Autour de moi</h2>
-    <div class="glass">
-      <div class="cell"><span class="ic" style="background:var(--blue)">➤</span><button id="geo" class="linkbtn" type="button">Utiliser ma position</button></div>
-      <div class="cell"><span class="ic" style="background:var(--red)">⌂</span><input id="addr" class="addr" list="addrList" placeholder="Ou tapez une adresse" autocomplete="off" enterkeyhint="search"><datalist id="addrList"></datalist></div>
-      <div class="cell"><label for="radius">Rayon</label><select id="radius"><option value="5">5 km</option><option value="10" selected>10 km</option><option value="15">15 km</option><option value="20">20 km</option><option value="30">30 km</option><option value="50">50 km</option><option value="75">75 km</option><option value="100">100 km</option></select></div>
-      <div class="cell"><label for="roundtrip">Compter l'aller-retour</label><span class="switch"><input type="checkbox" id="roundtrip" checked><span></span></span></div>
-    </div>
-    <p id="status"></p>
-  </section>
-
-  <section class="sect" id="resultsPanel">
+  <section class="panel" id="resultsPanel" style="display:none">
     <h2>Toutes les stations, de la plus rentable à la moins rentable</h2>
-    <div class="glass"><table class="stack"><thead><tr><th>#</th><th>Station</th><th>Prix/L</th><th>Distance</th><th>Trajet</th><th>Coût total</th><th>Écart</th></tr></thead><tbody id="rows"></tbody></table></div>
-    <p class="foot">Coût total = litres × prix + carburant brûlé pour le trajet × prix. Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
+    <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
+    <p class="muted">Coût total = litres à mettre × prix + carburant consommé pour le trajet × prix. Distances par la route (OSRM) quand c'est possible, sinon estimées à vol d'oiseau × 1,3. Prix : flux officiel prix-carburants.gouv.fr.</p>
   </section>
-</div>
-
-<div class="dock"><div class="dockin">
-  <div id="prog" class="prog" aria-hidden="true"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
-  <button id="go" type="button"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
-</div></div>
+</main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="cars.js"></script>
