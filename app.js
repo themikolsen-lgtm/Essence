@@ -175,6 +175,15 @@ $("carq").addEventListener("keydown", ev=>{
   const first = searchCars($("carq").value)[0];
   if(first) selectCar(first);
 });
+// curseurs de batterie : valeur affichée + jauge (rouge = batterie actuelle, vert = ce qui sera rechargé)
+function updSoc(){
+  let now = +$("socNow").value, tgt = +$("socTarget").value;
+  if(tgt <= now){ tgt = Math.min(100, Math.ceil((now+5)/5)*5); $("socTarget").value = tgt; }
+  $("socNowV").textContent = now+" %"; $("socTargetV").textContent = tgt+" %";
+  $("socNowBar").style.width = now+"%";
+  $("socTgtBar").style.left = now+"%"; $("socTgtBar").style.width = (tgt-now)+"%";
+}
+["socNow","socTarget"].forEach(id=>$(id).addEventListener("input", updSoc));
 ["fuel","conso","socNow","socTarget","bat","dcmax","acmax"].forEach(id=>{ $(id).addEventListener("input", updSummary); $(id).addEventListener("change", ()=>{ updSummary(); save(); }); });
 function fillFuels(keys, keep){
   const prev = keep || $("fuel").value;
@@ -235,7 +244,7 @@ $("forget").addEventListener("click", ()=>{
   location.reload();
 });
 if(!car && !(+$("conso").value>0)){ if(!p) $("fuel").value="e10"; noCarDefaults(); }
-updQ(); updSummary();
+updQ(); updSoc(); updSummary();
 $("carBox").classList.toggle("closed", !!p && +$("conso").value>0);
 RESTORING = false;
 
