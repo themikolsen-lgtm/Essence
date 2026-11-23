@@ -95,7 +95,8 @@ function selectCar(e, closeList=true){
 function updSummary(){
   $("sumName").textContent = car && car.fuel!=="x" ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""} · ${car.eng}` : "Ma voiture";
   const c = +$("conso").value;
-  $("sumInfo").textContent = `${FUELS[$("fuel").value]||""}${c>0?" · "+fmt(c,1)+" L/100 km":""}`;
+  const l = litersToBuy();
+  $("sumInfo").textContent = `${FUELS[$("fuel").value]||""}${c>0?" · "+fmt(c,1)+" L/100":""}${l>0?" · plein "+l+" L":""}`;
 }
 function setCarOpen(open){
   if(!open && !(+$("conso").value>0)) open = true;
@@ -124,16 +125,20 @@ $("carq").addEventListener("input", ()=>{ clearTimeout(tCar); tCar=setTimeout(re
 $("carHits").addEventListener("click", ev=>{ const b=ev.target.closest("button"); if(b) selectCar(ENTRIES[+b.dataset.i]); });
 
 // ---------- quantité ----------
+const RESERVE_L = 4;
 function litersToBuy(){
-  const q = $("qty").value;
+  const q = $("qty").value, tank = +$("tank").value;
   if(q==="L") return +$("liters").value;
-  return Math.round(+$("tank").value * +q);
+  if(q==="R") return Math.max(0, Math.round(tank - RESERVE_L));
+  return Math.round(tank * (1 - +q));
 }
 function updQ(){
-  const lit = $("qty").value==="L";
+  const q = $("qty").value, lit = q==="L";
   $("tankBox").style.display = lit?"none":"";
   $("litresBox").style.display = lit?"":"none";
+  $("qhint").style.display = q==="R"?"":"none";
   $("pleinOut").textContent = litersToBuy()>0 ? litersToBuy()+" L" : "–";
+  if(typeof updSummary==="function") updSummary();
 }
 ["qty","tank","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>{ $(id).addEventListener("change",()=>{updQ();save();}); $(id).addEventListener("input",updQ); });
 
@@ -151,6 +156,7 @@ if(p){
   $("roundtrip").checked = p.rt!==false;
   $("notoll").checked = !!p.nt;
 }
+if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
 updQ(); updSummary();
 $("carBox").classList.toggle("closed", +$("conso").value>0);
 
