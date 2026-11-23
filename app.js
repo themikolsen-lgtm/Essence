@@ -643,7 +643,7 @@ function render(st, o){
     </div>
     ${best===nearest ? `<div class="save">✓ C'est aussi la plus proche</div>` : `<div class="save">− ${fmt(saving)} € vs la plus proche</div>`}
     <p class="note">${best===nearest?"":`La plus proche : ${esc(sName(nearest))}, ${esc(nearest.ville)} à ${fmt(nearest.price,3)} €/L. `}Jusqu'à ${fmt(worst.total-best.total)} € d'écart avec la pire option.</p>
-    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" id="logBest">${ICON.plus}Noter ce plein</button></div>`;
+    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" id="logBest">${ICON.plus}Noter ce plein</button><button type="button" class="logit" data-bestmap="1">${ICON.pin}Voir sur la carte</button></div>`;
   window.ESSENCE_LAST = {station:`${sName(best)}, ${best.ville||""}`, price:best.price, liters:o.liters, fuel:FUELS[o.fuel]};
   $("logBest").onclick = () => window.CARNET?.prefill(window.ESSENCE_LAST);
   $("resultsPanel").style.display="block";
@@ -682,11 +682,20 @@ function showResults(st){
   try{ drawMap(st); }catch(e){}
 }
 let MARKERS = [], FOCUS = null;
-function focusStation(i){
-  FOCUS = i; setView("map");
-  setTimeout(()=>{ try{ $("viewSw").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }, 50);
-  applyFocus();
+// « Voir sur la carte » : Google Maps (sans clé) centré sur la station, dans une fenêtre
+function openGmap(s){
+  if(!s) return;
+  const name = s.ch ? evName(s) : sName(s);
+  const addr = s.ch ? (s.a||"") : `${s.adresse||""}, ${s.cp||""} ${s.ville||""}`;
+  $("gTitle").textContent = name;
+  $("gSub").textContent = s.ch ? `${addr} · ${fmt(s.p,0)} kW · charge ${fmtMin(s.ch.min)}` : `${addr} · ${fmt(s.price,3)} €/L · ${fmt(s.km,1)} km`;
+  $("gFrame").src = `https://maps.google.com/maps?q=${s.lat},${s.lon}&z=16&hl=fr&output=embed`;
+  $("gNav").href = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
+  $("gOpen").href = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`;
+  const d = $("gmap"); d.showModal ? d.showModal() : d.setAttribute("open","");
 }
+$("gmap").addEventListener("close", ()=>{ $("gFrame").src = "about:blank"; });
+function focusStation(i){ if(LAST && LAST[i]) openGmap(LAST[i]); }
 function applyFocus(){
   if(FOCUS==null || !map || !MARKERS[FOCUS] || !LAST || !LAST[FOCUS]) return;
   const s = LAST[FOCUS], m = MARKERS[FOCUS];
@@ -694,6 +703,7 @@ function applyFocus(){
   setTimeout(()=>{ try{ m.openPopup(); }catch(e){} }, 300);
   FOCUS = null;
 }
+$("best").addEventListener("click", ev=>{ if(ev.target.closest("[data-bestmap]") && LAST) openGmap(LAST[0]); });
 $("rows").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-map]"); if(b){ ev.stopPropagation(); focusStation(+b.dataset.map); } });
 let leafletP = null;
 function loadLeaflet(){
@@ -868,7 +878,7 @@ function renderEV(st, ctx, rt){
     <div>${costTxt(best)}${best.h?` · ${esc(best.h)}`:""}</div>
     <div style="margin:10px 0 6px"><b>☕ Pendant la charge, à côté :</b></div>
     <div class="near" id="bestNear"><span class="muted" style="color:inherit;opacity:.85">Recherche…</span></div>
-    <div class="bestbtns" style="margin-top:12px"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div>`;
+    <div class="bestbtns" style="margin-top:12px"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" data-bestmap="1">${ICON.pin}Voir sur la carte</button></div>`;
   $("resultsPanel").style.display="block";
   $("resTitle").textContent = "Toutes les bornes";
   $("evSort").nextElementSibling.style.display = "";
