@@ -1,0 +1,9 @@
+{
+  "name": "Essence – le plein le plus rentable",
+  "short_name": "Essence",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#ff9500",
+  "icons": [{"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}, {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}]
+}

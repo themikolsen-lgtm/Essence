@@ -42,7 +42,7 @@ function searchCars(q){
     res.push({e,score});
   }
   res.sort((a,b)=>b.score-a.score);
-  return res.slice(0,8).map(r=>r.e);
+  return res.slice(0,5).map(r=>r.e);
 }
 const carLabel = e => `${e.brand} ${e.model}${e.gen?" "+e.gen:""} · ${e.eng}`;
 function renderHits(){
@@ -164,18 +164,29 @@ async function fetchStations(o, fuel, radius){
   }).filter(s=>s.price>0 && isFinite(s.lat));
 }
 // Enseignes : OpenStreetMap (le flux officiel ne donne pas le nom de la station)
+const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+function cleanBrand(t){
+  let n = t.brand || t.name || t.operator || "";
+  n = n.replace(/^(station[- ]service|station|relais)\s+/i,"").trim();
+  return n;
+}
 async function addBrands(o, list){
-  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 9000);
-  try{
-    const q = `[out:json][timeout:20];(${list.map(s=>`nwr["amenity"="fuel"](around:250,${s.lat.toFixed(5)},${s.lon.toFixed(5)});`).join("")});out center tags;`;
-    const r = await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrl.signal}).then(r=>r.json());
-    const osm = (r.elements||[]).map(e=>({lat:e.lat??e.center?.lat, lon:e.lon??e.center?.lon, name:e.tags?.brand||e.tags?.name||e.tags?.operator})).filter(e=>e.name&&e.lat);
-    list.forEach(s=>{
-      let best=null, bd=0.25;
-      osm.forEach(m=>{ const d=haversine(s,m); if(d<bd){ bd=d; best=m; } });
-      if(best) s.brand = best.name;
-    });
-  }catch(e){} finally{ clearTimeout(t); }
+  const q = `[out:json][timeout:25];(${list.map(s=>`nwr["amenity"="fuel"](around:300,${s.lat.toFixed(5)},${s.lon.toFixed(5)});`).join("")});out center tags;`;
+  for(const url of OVERPASS){
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 10000);
+    try{
+      const r = await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrl.signal});
+      if(!r.ok) continue;
+      const j = await r.json();
+      const osm = (j.elements||[]).map(e=>({lat:e.lat??e.center?.lat, lon:e.lon??e.center?.lon, name:cleanBrand(e.tags||{})})).filter(e=>e.name&&e.lat);
+      list.forEach(s=>{
+        let best=null, bd=0.3;
+        osm.forEach(m=>{ const d=haversine(s,m); if(d<bd){ bd=d; best=m; } });
+        if(best) s.brand = best.name;
+      });
+      return;
+    }catch(e){} finally{ clearTimeout(t); }
+  }
 }
 async function roadDistances(o, list){
   const coords = [o,...list].map(p=>`${p.lon.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
@@ -192,7 +203,7 @@ async function search(){
   const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0)) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save();
+  save(); $("carHits").innerHTML="";
   try{
     if(!origin){
       const q=$("addr").value.trim();
@@ -218,30 +229,29 @@ async function search(){
   }catch(e){ setStatus(e.message||"Une erreur est survenue.", true); }
 }
 
-const sName = s => s.brand || "Station";
+const sName = s => s.brand ? "Station "+s.brand : "Station "+(s.ville||"");
 function render(st, o){
   const best = st[0], nearest = st.reduce((a,b)=>a.km<b.km?a:b), worst = st[st.length-1];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   $("best").style.display="block";
   $("best").innerHTML = `
-    <div>Le plus rentable${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""} :</div>
+    <div>Le plus rentable${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
     <div class="big">${esc(sName(best))}</div>
     <div>${esc(best.adresse)}, ${esc(best.cp)} ${esc(best.ville)}</div>
     <div class="big" style="margin-top:6px">${fmt(best.total)} € <span style="font-size:.5em">pour ${o.liters} L</span></div>
     <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €</div>
-    <div style="margin-top:8px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(nearest.total-best.total)} €</b> par rapport à la plus proche (${esc(sName(nearest))}, ${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
+    <div style="margin:10px 0 14px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(nearest.total-best.total)} €</b> par rapport à la plus proche (${esc(sName(nearest))}, ${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
     Jusqu'à <b>${fmt(worst.total-best.total)} €</b> d'écart avec la pire option.</div>
-    <p style="margin:12px 0 0"><a href="${nav(best)}" target="_blank" rel="noopener">➜ Itinéraire vers cette station</a></p>`;
+    <a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire  ›</a>`;
   $("resultsPanel").style.display="block";
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
     <td data-l="Rang">${i+1}</td>
-    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><br>${esc(s.adresse)}<br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · prix du "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span></td>
-    <td class="n" data-l="Prix/L">${fmt(s.price,3)} €</td>
-    <td class="n" data-l="Distance">${fmt(s.km,1)} km</td>
-    <td class="n" data-l="Trajet">${fmt(s.tripCost)} €</td>
+    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><br>${esc(s.adresse)}<br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · prix du "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span>
+      <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span></div></td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
   drawMap(st);
+  try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
 }
 function drawMap(st){
   if(typeof L==="undefined") return;
