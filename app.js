@@ -89,6 +89,25 @@ function selectCar(e, closeList=true){
   save();
 }
 const isEV = () => $("fuel").value==="elec";
+// stations proches avec leur prix du jour, pour le carnet
+window.ESSENCE_NEARBY = async () => {
+  if(isEV()) throw new Error("Le carnet suit les pleins de carburant : choisissez un carburant dans votre voiture.");
+  if(!origin){
+    const q = $("addr").value.trim();
+    if(q && !q.startsWith("📍")) origin = await geocode(q);
+    else {
+      try{ const pos = await getPos({enableHighAccuracy:false, timeout:10000, maximumAge:600000});
+           origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"votre position"}; }
+      catch(e){ throw new Error("Position inconnue : indiquez une adresse dans l'onglet « Trouver » (bouton Détails)."); }
+    }
+  }
+  const fuel = $("fuel").value;
+  let st = await fetchStations(origin, fuel, Math.max(10, +$("radius").value||10));
+  const brands = await BRANDS;
+  st.forEach(s=>{ if(brands[s.id]) s.brand = brands[s.id]; s.km = haversine(origin,s); });
+  st.sort((a,b)=>a.km-b.km);
+  return {fuel:FUELS[fuel], list: st.slice(0,15).map(s=>({name:sName(s), ville:s.ville||"", adresse:s.adresse||"", price:s.price, km:s.km, maj:s.maj}))};
+};
 window.ESSENCE_SET_CONSO = v => { $("conso").value = v; updSummary(); save(); };
 const AVG = {gazole:5.5,e10:6.5,sp95:6.5,sp98:6.8,e85:8.0,gplc:8.0,elec:17};
 function noCarDefaults(){
@@ -172,7 +191,9 @@ function updQ(){
 
 // ---------- préférences ----------
 const carKey = e => e ? [e.brand,e.model,e.gen,e.eng].join("|") : null;
-function save(){ store.set("prefs2",{v:2,carKey:carKey(car),addr:$("addr").value.startsWith("📍")?"":$("addr").value.trim(),carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
+let RESTORING = true;
+function save(){ if(!RESTORING){ try{ localStorage.setItem("essence_prefs_at", String(Date.now())); }catch(e){} }
+  store.set("prefs2",{v:2,carKey:carKey(car),addr:$("addr").value.startsWith("📍")?"":$("addr").value.trim(),carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
   qty:$("qty").value,tank:$("tank").value,soc:$("socNow").value,tgt:$("socTarget").value,bat:$("bat").value,dc:$("dcmax").value,ac:$("acmax").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
 const FIRST_VISIT = !p;
@@ -201,6 +222,7 @@ $("forget").addEventListener("click", ()=>{
 if(!car && !(+$("conso").value>0)){ if(!p) $("fuel").value="e10"; noCarDefaults(); }
 updQ(); updSummary();
 $("carBox").classList.toggle("closed", !!p && +$("conso").value>0);
+RESTORING = false;
 
 let pTimer;
 function progress(pct, txt){

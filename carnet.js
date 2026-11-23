@@ -6,6 +6,8 @@ const fmt = (n,d=2) => (+n).toLocaleString("fr-FR",{minimumFractionDigits:d,maxi
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const load = () => { try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; } };
 const store = list => { try{ localStorage.setItem(KEY, JSON.stringify(list)); }catch(e){ toast("Impossible d'enregistrer sur cet appareil."); } };
+const DELKEY = "essence_carnet_deleted";
+const markDeleted = (id, on) => { try{ const d = new Set(JSON.parse(localStorage.getItem(DELKEY)||"[]")); on ? d.add(id) : d.delete(id); localStorage.setItem(DELKEY, JSON.stringify([...d])); }catch(e){} };
 const today = () => new Date().toISOString().slice(0,10);
 const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 let entries = load(), editing = null, undo = null;
@@ -95,8 +97,8 @@ $("hist").addEventListener("click", ev=>{
   const b = ev.target.closest("button"); if(!b) return;
   if(b.dataset.del){
     const i = entries.findIndex(e=>e.id===b.dataset.del); if(i<0) return;
-    undo = {e:entries[i], i}; entries.splice(i,1); store(entries); render();
-    toast("Plein supprimé.", "Annuler", ()=>{ entries.splice(undo.i,0,undo.e); store(entries); render(); });
+    undo = {e:entries[i], i}; markDeleted(undo.e.id, true); entries.splice(i,1); store(entries); render();
+    toast("Plein supprimé.", "Annuler", ()=>{ markDeleted(undo.e.id, false); entries.splice(undo.i,0,undo.e); store(entries); render(); });
   }
   if(b.dataset.edit){
     const e = entries.find(x=>x.id===b.dataset.edit); if(!e) return;
@@ -129,7 +131,7 @@ $("logForm").addEventListener("submit", ev=>{
   const km = num("lKm");
   const e = {id: editing || Date.now().toString(36)+Math.random().toString(36).slice(2,6), date:$("lDate").value||today(),
              km: km>0 ? Math.round(km) : null, l:Math.round(l*100)/100, p:Math.round(p*1000)/1000, t:Math.round(t*100)/100,
-             full:$("lFull").checked, st:$("lSt").value.trim()};
+             full:$("lFull").checked, st:$("lSt").value.trim(), u:Date.now()};
   // compteur incohérent : avertissement, sans bloquer
   const prev = entries.filter(x=>x.km && x.id!==e.id && x.date<=e.date).sort((a,b)=>b.km-a.km)[0];
   if(e.km && prev && e.km < prev.km) toast("Attention : compteur plus petit qu'au plein précédent.");
@@ -137,6 +139,29 @@ $("logForm").addEventListener("submit", ev=>{
   if(editing){ const i=entries.findIndex(x=>x.id===editing); entries[i]=e; } else entries.push(e);
   store(entries); resetForm(); render();
 });
+
+// ---------- choisir une station proche : nom + prix du jour ----------
+$("stPickBtn").onclick = async () => {
+  const box = $("stPick");
+  if(!box.hidden){ box.hidden = true; return; }
+  box.hidden = false; box.innerHTML = `<p class="muted">Recherche des stations proches…</p>`;
+  try{
+    const r = await window.ESSENCE_NEARBY();
+    if(!r.list.length){ box.innerHTML = `<p class="muted">Aucune station trouvée à proximité pour le ${esc(r.fuel)}.</p>`; return; }
+    box.innerHTML = `<p class="muted">Prix du ${esc(r.fuel)} aujourd'hui :</p>` + r.list.map((x,i)=>`<button type="button" data-i="${i}">
+        <span>${esc(x.name)}</span><b>${fmt(x.price,3)} €</b><small>${esc(x.ville)} · ${fmt(x.km,1)} km</small></button>`).join("");
+    box.onclick = ev => {
+      const b = ev.target.closest("button[data-i]"); if(!b) return;
+      const x = r.list[+b.dataset.i];
+      $("lSt").value = `${x.name}${x.ville?", "+x.ville:""}`;
+      $("lP").value = x.price; lastTyped = "lP";
+      const l = num("lL"); if(l) $("lT").value = (l*x.price).toFixed(2);
+      box.hidden = true;
+      toast(`Prix rempli : ${fmt(x.price,3)} €/L`);
+      if(!l) try{ $("lL").focus(); }catch(e){}
+    };
+  }catch(e){ box.innerHTML = `<p class="muted">${esc(e.message||"Impossible de charger les stations.")}</p>`; }
+};
 
 // ---------- depuis l'onglet « Trouver » ----------
 window.CARNET = {
@@ -189,6 +214,7 @@ function toast(msg, action, fn){
   tTimer = setTimeout(()=>t.hidden=true, action?6000:3500);
 }
 
+window.addEventListener("essence-synced", ()=>{ entries = load(); render(); });
 resetForm();
 render();
 }

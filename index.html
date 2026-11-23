@@ -230,11 +230,54 @@ main[hidden]{display:none}
 .saverow button{flex:1}
 #tabLog .row.r3 input{padding-left:12px;padding-right:8px}
 #tabLog input[type=date]{padding-left:12px;padding-right:8px}
+
+/* Compte */
+header .htxt{flex:1}
+.acct{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:#fff;font-size:20px;flex:none;position:relative}
+.acct.on::after{content:"";position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid #fff}
+.sheet{border:0;border-radius:28px;padding:20px 16px 18px;width:min(440px,calc(100% - 24px));background:var(--bg);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.sheet::backdrop{background:rgba(0,0,0,.45)}
+.sheetx{position:absolute;right:10px;top:10px;margin:0}
+.sheetx button{width:40px;height:40px;min-height:40px;padding:0;background:var(--field)}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--field)}
+.or{display:flex;align-items:center;gap:10px;margin:14px 4px;color:var(--muted);font-size:13px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--field)}
+.sheet .err{color:var(--red);font-size:14px;margin:10px 4px 0;font-weight:600}
+.sheet .err:empty{display:none}
+.pickbtn{margin-top:10px;background:var(--field);font-size:15px;white-space:normal;line-height:1.25;padding:8px 16px}
+.stpick{display:grid;gap:6px;margin-top:8px;max-height:340px;overflow:auto;padding:2px}
+.stpick button{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;border-radius:20px!important;padding:8px 16px;background:var(--bg);font-weight:600;min-height:52px}
+.stpick button small{grid-column:1;color:var(--muted);font-weight:500;font-size:12px}
+.stpick button b{grid-row:1/3;grid-column:2;align-self:center;color:var(--accent);font-size:16px}
+.stpick p{margin:4px 8px;font-size:14px}
+[hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<header><span class="logo">⛽</span><div><h1>Où faire le plein ?</h1><p>Le moins cher, trajet compris</p></div></header>
+<header><span class="logo">⛽</span><div class="htxt"><h1>Où faire le plein ?</h1><p>Le moins cher, trajet compris</p></div><button type="button" id="acctBtn" class="acct" hidden aria-label="Mon compte">👤</button></header>
+<dialog id="acct" class="sheet" aria-labelledby="acctTitle">
+  <form method="dialog" class="sheetx"><button aria-label="Fermer">✕</button></form>
+  <div id="acctOut">
+    <h2 id="acctTitle" class="ch2">Mon compte</h2>
+    <p class="muted" style="margin:0 4px 12px">Connectez-vous pour retrouver vos réglages et votre carnet sur tous vos appareils.</p>
+    <button type="button" id="gBtn" class="gbtn"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>Continuer avec Google</button>
+    <div class="or"><span>ou par e-mail</span></div>
+    <form id="mailForm">
+      <label class="lbl" for="aMail">E-mail</label><input id="aMail" type="email" autocomplete="email" required>
+      <label class="lbl" for="aPass" style="margin-top:8px">Mot de passe</label><input id="aPass" type="password" autocomplete="current-password" minlength="6" required>
+      <div class="saverow"><button type="submit" class="primary" id="aLogin">Se connecter</button><button type="button" id="aSignup">Créer un compte</button></div>
+      <button type="button" class="linkish" id="aReset" style="margin:10px 4px 0">Mot de passe oublié ?</button>
+    </form>
+  </div>
+  <div id="acctIn" hidden>
+    <h2 class="ch2">Mon compte</h2>
+    <p style="margin:0 4px 6px">Connecté : <b id="acctMail"></b></p>
+    <p class="muted" id="syncState" style="margin:0 4px 14px"></p>
+    <div class="saverow"><button type="button" id="aSync">Synchroniser maintenant</button><button type="button" id="aOut">Se déconnecter</button></div>
+  </div>
+  <p class="err" id="acctErr" role="alert"></p>
+</dialog>
 <nav class="tabs" role="tablist">
   <button type="button" role="tab" id="tabBtnFind" aria-selected="true" aria-controls="tabFind">⛽ Trouver</button>
   <button type="button" role="tab" id="tabBtnLog" aria-selected="false" aria-controls="tabLog">📒 Carnet</button>
@@ -317,7 +360,7 @@ main[hidden]{display:none}
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
   <p class="muted saved">✓ Vos réglages (voiture, quantité, rayon, adresse) sont enregistrés sur cet appareil, rien que pour vous. <button type="button" id="forget" class="linkish">Effacer mes réglages</button></p>
-  <p class="muted" style="text-align:center">Version 20261123r</p>
+  <p class="muted" style="text-align:center">Version 20261123t</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -340,6 +383,8 @@ main[hidden]{display:none}
         <div><label class="lbl" for="lP">Prix / L</label><input id="lP" type="number" inputmode="decimal" min="0" step="0.001" placeholder="1,749"></div>
         <div><label class="lbl" for="lT">Total €</label><input id="lT" type="number" inputmode="decimal" min="0" step="0.01" placeholder="72,06"></div>
       </div>
+      <button type="button" id="stPickBtn" class="pickbtn">⛽ Choisir une station proche (remplit le prix du jour)</button>
+      <div id="stPick" class="stpick" hidden></div>
       <div class="row r2">
         <div><label class="lbl" for="lSt">Station (facultatif)</label><input id="lSt" type="text" placeholder="ex. E.Leclerc Arnas"></div>
         <div><span class="lbl">&nbsp;</span><label class="chip"><input type="checkbox" id="lFull" checked>Plein complet</label></div>
@@ -370,8 +415,10 @@ main[hidden]{display:none}
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123r"></script>
-<script src="app.js?v=20261123r"></script>
-<script src="carnet.js?v=20261123r"></script>
+<script src="cars.js?v=20261123t"></script>
+<script src="app.js?v=20261123t"></script>
+<script src="carnet.js?v=20261123t"></script>
+<script src="firebase-config.js?v=20261123t"></script>
+<script type="module" src="compte.js?v=20261123t"></script>
 </body>
 </html>
