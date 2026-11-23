@@ -727,7 +727,7 @@ const BASES = {
   clair: {label:"Clair", srcs:[["https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}],["https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}]], dark:[["https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}]], attr:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © CARTO'},
   sat:   {label:"Satellite", srcs:[["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19}]], attr:'Imagerie © Esri'}
 };
-const getBase = () => { try{ return BASES[localStorage.getItem("essence_base")] ? localStorage.getItem("essence_base") : "plan"; }catch(e){ return "plan"; } };
+const getBase = () => { try{ return BASES[localStorage.getItem("essence_base")] ? localStorage.getItem("essence_base") : "clair"; }catch(e){ return "clair"; } };
 function setBase(key){
   if(!map) return;
   try{ localStorage.setItem("essence_base", key); }catch(e){}
