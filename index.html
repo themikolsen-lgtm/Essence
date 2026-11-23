@@ -26,6 +26,16 @@ button{cursor:pointer;font-weight:600}
 .row>*{flex:1 1 200px}
 .check{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:15px}
 .check input{width:22px;min-height:22px}
+.hits{display:grid;gap:6px;margin-top:8px}
+.hits button{text-align:left;font-weight:400;min-height:44px}
+.hits button b{font-weight:700}
+.carcard{display:none;margin-top:12px;border-left:6px solid var(--blue);background:var(--bg);border-radius:10px;padding:12px 14px}
+.carcard .nm{font-size:20px;font-weight:800;line-height:1.2}
+.carcard .cs{font-size:30px;font-weight:800;color:var(--blue);line-height:1.1;margin-top:4px}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.seg label{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;color:var(--ink);font-size:16px;margin:0;cursor:pointer;background:var(--bg)}
+.seg input{width:20px;min-height:20px}
+.out{font-size:24px;font-weight:800;min-height:44px;display:flex;align-items:center}
 #status{color:var(--muted);min-height:1.5em}
 #status.err{color:var(--red)}
 .best{background:var(--green);color:#fff;border-radius:14px;padding:18px;display:none}
@@ -48,11 +58,29 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
 <main>
   <section class="panel">
     <h2>1. Votre voiture</h2>
-    <div class="grid">
-      <div><label for="model">Modèle</label><select id="model"></select></div>
+    <label for="carq">Tapez votre voiture : marque, modèle, motorisation, année</label>
+    <input id="carq" type="search" placeholder="ex. clio 4 1.5 dci 2016  ·  208 puretech 2020  ·  golf 7 tdi" autocomplete="off">
+    <div id="carHits" class="hits"></div>
+    <div id="carCard" class="carcard"></div>
+    <div class="grid" style="margin-top:12px">
       <div><label for="fuel">Carburant</label><select id="fuel"></select></div>
-      <div><label for="conso">Consommation (L/100 km)</label><input id="conso" type="number" step="0.1" min="2" max="30"></div>
-      <div><label for="liters">Litres à mettre</label><input id="liters" type="number" step="1" min="5" max="150" value="40"></div>
+      <div><label for="conso">Consommation (L/100 km) – modifiable</label><input id="conso" type="number" step="0.1" min="2" max="30"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Combien de carburant ?</h2>
+    <div class="seg" role="radiogroup">
+      <label><input type="radio" name="qmode" value="plein" checked> Faire le plein</label>
+      <label><input type="radio" name="qmode" value="litres"> Saisir les litres</label>
+    </div>
+    <div class="grid" id="pleinBox">
+      <div><label for="tank">Taille du réservoir (L)</label><input id="tank" type="number" step="1" min="20" max="120" value="45"></div>
+      <div><label for="gauge">Niveau actuel de la jauge</label><select id="gauge"><option value="0">Réserve (vide)</option><option value="0.125">1/8</option><option value="0.25" selected>1/4</option><option value="0.5">1/2</option><option value="0.75">3/4</option></select></div>
+      <div><label>Litres à mettre</label><div class="out" id="pleinOut">–</div></div>
+    </div>
+    <div class="grid" id="litresBox" style="display:none">
+      <div><label for="liters">Litres à mettre</label><input id="liters" type="number" step="1" min="1" max="150" value="30"></div>
     </div>
   </section>
 
@@ -81,204 +109,7 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-{
-// Consommation mixte réelle approximative (L/100 km)
-const CARS = [
-  ["Peugeot 208 1.2 PureTech","essence",5.6],["Peugeot 208 1.5 BlueHDi","diesel",4.3],
-  ["Peugeot 2008 1.2 PureTech","essence",6.0],["Peugeot 2008 1.5 BlueHDi","diesel",4.8],
-  ["Peugeot 308 1.2 PureTech","essence",6.0],["Peugeot 308 1.5 BlueHDi","diesel",4.8],
-  ["Peugeot 3008 1.2 PureTech","essence",6.6],["Peugeot 3008 1.5 BlueHDi","diesel",5.2],
-  ["Peugeot 5008 1.5 BlueHDi","diesel",5.5],
-  ["Renault Clio V 1.0 TCe","essence",5.6],["Renault Clio V 1.5 dCi","diesel",4.2],["Renault Clio E-Tech hybride","essence",4.5],
-  ["Renault Captur 1.3 TCe","essence",6.3],["Renault Captur 1.5 dCi","diesel",4.8],
-  ["Renault Mégane 1.3 TCe","essence",6.2],["Renault Mégane 1.5 dCi","diesel",4.7],
-  ["Renault Austral E-Tech","essence",5.0],["Renault Twingo 1.0 SCe","essence",5.3],
-  ["Renault Kangoo 1.5 dCi","diesel",5.6],
-  ["Dacia Sandero 1.0 TCe","essence",5.7],["Dacia Sandero 1.0 TCe ECO-G (GPL)","gpl",7.2],
-  ["Dacia Duster 1.3 TCe","essence",6.6],["Dacia Duster 1.5 dCi","diesel",5.0],["Dacia Duster ECO-G (GPL)","gpl",8.0],
-  ["Dacia Jogger 1.0 TCe","essence",6.0],["Dacia Spring (électrique)","none",0],
-  ["Citroën C3 1.2 PureTech","essence",5.7],["Citroën C3 1.5 BlueHDi","diesel",4.3],
-  ["Citroën C3 Aircross 1.2","essence",6.2],["Citroën C4 1.2 PureTech","essence",6.0],["Citroën C5 Aircross 1.5 BlueHDi","diesel",5.3],
-  ["Citroën Berlingo 1.5 BlueHDi","diesel",5.5],
-  ["Volkswagen Polo 1.0 TSI","essence",5.5],["Volkswagen Golf 1.5 TSI","essence",6.0],["Volkswagen Golf 2.0 TDI","diesel",4.8],
-  ["Volkswagen T-Roc 1.5 TSI","essence",6.5],["Volkswagen Tiguan 2.0 TDI","diesel",5.8],
-  ["Toyota Yaris hybride","essence",4.0],["Toyota Yaris Cross hybride","essence",4.6],["Toyota C-HR hybride","essence",5.0],
-  ["Toyota Corolla hybride","essence",4.8],["Toyota RAV4 hybride","essence",5.8],["Toyota Aygo X","essence",5.0],
-  ["Fiat 500 1.0 hybride","essence",5.2],["Fiat Panda 1.0 hybride","essence",5.3],
-  ["Ford Fiesta 1.0 EcoBoost","essence",5.6],["Ford Puma 1.0 EcoBoost","essence",5.9],["Ford Focus 1.0 EcoBoost","essence",6.0],["Ford Kuga 2.0 EcoBlue","diesel",5.6],
-  ["Opel Corsa 1.2","essence",5.6],["Opel Mokka 1.2","essence",6.0],["Opel Astra 1.2","essence",6.0],
-  ["Kia Picanto 1.0","essence",5.0],["Kia Sportage 1.6 T-GDi","essence",7.2],["Kia Niro hybride","essence",4.6],
-  ["Hyundai i10 1.0","essence",5.2],["Hyundai i20 1.0 T-GDi","essence",5.6],["Hyundai Tucson 1.6 T-GDi","essence",7.2],
-  ["Skoda Fabia 1.0 TSI","essence",5.4],["Skoda Octavia 2.0 TDI","diesel",4.6],
-  ["Seat Ibiza 1.0 TSI","essence",5.5],["Seat Arona 1.0 TSI","essence",5.8],
-  ["Nissan Qashqai 1.3 DIG-T","essence",6.5],["Nissan Juke 1.0 DIG-T","essence",6.0],
-  ["MG ZS 1.5","essence",6.9],["Suzuki Swift 1.2 hybride","essence",4.8],
-  ["BMW Série 1 118i","essence",6.2],["BMW Série 3 320d","diesel",5.0],["Mercedes Classe A 180","essence",6.3],["Audi A3 35 TFSI","essence",6.1],
-  ["Tesla / autre électrique","none",0]
-];
-const FUELS = {gazole:"Gazole",e10:"SP95-E10",sp95:"SP95",sp98:"SP98",e85:"E85 (bioéthanol)",gplc:"GPL"};
-const DEFAULT_FUEL = {essence:"e10",diesel:"gazole",gpl:"gplc"};
-const API = "https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records";
-const $ = id => document.getElementById(id);
-const store = {get(k){try{return JSON.parse(localStorage.getItem("essence_"+k))}catch(e){return null}},set(k,v){try{localStorage.setItem("essence_"+k,JSON.stringify(v))}catch(e){}}};
-const fmt = (n,d=2) => n.toLocaleString("fr-FR",{minimumFractionDigits:d,maximumFractionDigits:d});
-const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let origin = null, map = null, layer = null;
-
-// ---------- voiture ----------
-$("model").innerHTML = CARS.map((c,i)=>`<option value="${i}">${esc(c[0])}</option>`).join("") + `<option value="custom">Autre modèle (saisie manuelle)</option>`;
-function fillFuels(type){
-  const keys = type==="diesel" ? ["gazole"] : type==="gpl" ? ["gplc","e10","sp95","sp98"] : type==="essence" ? ["e10","sp95","sp98","e85"] : Object.keys(FUELS);
-  $("fuel").innerHTML = keys.map(k=>`<option value="${k}">${FUELS[k]}</option>`).join("");
-  $("fuel").value = DEFAULT_FUEL[type] || keys[0];
-}
-function onModel(){
-  const v = $("model").value;
-  if(v==="custom"){ fillFuels("all"); $("conso").value = $("conso").value || 6; return; }
-  const c = CARS[v];
-  if(c[1]==="none"){ fillFuels("all"); $("conso").value=""; setStatus("Ce modèle est électrique : pas besoin d'essence ! Choisissez un autre modèle.", true); return; }
-  fillFuels(c[1]); $("conso").value = c[2]; setStatus("");
-}
-$("model").addEventListener("change", ()=>{ onModel(); save(); });
-["fuel","conso","liters","radius","roundtrip"].forEach(id=>$(id).addEventListener("change",save));
-function save(){ store.set("prefs",{model:$("model").value,fuel:$("fuel").value,conso:$("conso").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked}); }
-const p = store.get("prefs");
-if(p){ $("model").value=p.model; onModel(); if(p.fuel)$("fuel").value=p.fuel; if(p.conso)$("conso").value=p.conso; if(p.liters)$("liters").value=p.liters; if(p.radius)$("radius").value=p.radius; $("roundtrip").checked=p.rt!==false; }
-else { $("model").value="0"; onModel(); }
-
-function setStatus(msg, err){ $("status").textContent = msg; $("status").className = err?"err":""; }
-
-// ---------- adresse ----------
-let tAddr;
-$("addr").addEventListener("input", ()=>{
-  clearTimeout(tAddr); origin = null;
-  const q = $("addr").value.trim(); if(q.length<4) return;
-  tAddr = setTimeout(async()=>{
-    try{
-      const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`).then(r=>r.json());
-      $("addrList").innerHTML = r.features.map(f=>`<option value="${esc(f.properties.label)}">`).join("");
-    }catch(e){}
-  },300);
-});
-async function geocode(q){
-  const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=1`).then(r=>r.json());
-  if(!r.features?.length) throw new Error("Adresse introuvable.");
-  const [lon,lat] = r.features[0].geometry.coordinates;
-  return {lat,lon,label:r.features[0].properties.label};
-}
-$("geo").addEventListener("click", ()=>{
-  if(!navigator.geolocation) return setStatus("La géolocalisation n'est pas disponible sur cet appareil.", true);
-  setStatus("Recherche de votre position…");
-  navigator.geolocation.getCurrentPosition(pos=>{
-    origin = {lat:pos.coords.latitude, lon:pos.coords.longitude, label:"Ma position"};
-    $("addr").value = ""; $("addr").placeholder = "📍 Position actuelle utilisée";
-    search();
-  }, err=>setStatus("Impossible d'obtenir votre position ("+err.message+"). Tapez une adresse à la place.", true), {enableHighAccuracy:true,timeout:15000});
-});
-$("go").addEventListener("click", search);
-$("addr").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
-
-// ---------- calcul ----------
-function haversine(a,b){
-  const R=6371, r=x=>x*Math.PI/180, dLat=r(b.lat-a.lat), dLon=r(b.lon-a.lon);
-  const h=Math.sin(dLat/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLon/2)**2;
-  return 2*R*Math.asin(Math.sqrt(h));
-}
-async function fetchStations(o, fuel, radius){
-  const base = `${API}?limit=100&where=${encodeURIComponent(`within_distance(geom, geom'POINT(${o.lon} ${o.lat})', ${radius}km)`)}`;
-  let r = await fetch(base + encodeURIComponent(` and ${fuel}_prix is not null`));
-  if(!r.ok) r = await fetch(base);
-  if(!r.ok) throw new Error("Le service des prix ne répond pas ("+r.status+").");
-  const data = await r.json();
-  return (data.results||[]).map(s=>{
-    const lat = s.geom?.lat ?? (+s.latitude/100000), lon = s.geom?.lon ?? (+s.longitude/100000);
-    return {id:s.id, adresse:s.adresse, ville:s.ville, cp:s.cp, lat, lon, price:+s[fuel+"_prix"], maj:s[fuel+"_maj"], auto24:s.horaires_automate_24_24};
-  }).filter(s=>s.price>0 && isFinite(s.lat));
-}
-async function roadDistances(o, list){
-  // OSRM : distances par la route depuis le point de départ
-  const coords = [o,...list].map(p=>`${p.lon.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
-  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 8000);
-  try{
-    const r = await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`,{signal:ctrl.signal}).then(r=>r.json());
-    if(r.code!=="Ok") return false;
-    list.forEach((s,i)=>{ const d=r.distances[0][i+1], t=r.durations[0][i+1]; if(d!=null){ s.km=d/1000; s.min=t/60; s.road=true; } });
-    return true;
-  }catch(e){ return false; } finally{ clearTimeout(t); }
-}
-async function search(){
-  const fuel=$("fuel").value, conso=+$("conso").value, liters=+$("liters").value, radius=+$("radius").value, rt=$("roundtrip").checked;
-  if(!(conso>0)) return setStatus("Indiquez la consommation de la voiture.", true);
-  if(!(liters>0)) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save();
-  try{
-    if(!origin){
-      const q=$("addr").value.trim();
-      if(!q) return setStatus("Tapez une adresse ou utilisez « Ma position actuelle ».", true);
-      setStatus("Recherche de l'adresse…"); origin = await geocode(q);
-    }
-    setStatus(`Recherche des stations ${FUELS[fuel]} dans un rayon de ${radius} km…`);
-    let st = await fetchStations(origin, fuel, radius);
-    if(!st.length) return setStatus(`Aucune station ne vend du ${FUELS[fuel]} dans un rayon de ${radius} km. Essayez un rayon plus grand.`, true);
-    st.forEach(s=>{ s.km = haversine(origin,s)*1.3; s.min = s.km/50*60; s.road=false; });
-    // on garde les 40 candidates les plus prometteuses pour le calcul routier
-    const est = s => s.price*(liters + (rt?2:1)*s.km*conso/100);
-    st.sort((a,b)=>est(a)-est(b)); st = st.slice(0,40);
-    setStatus("Calcul des distances par la route…");
-    await roadDistances(origin, st);
-    st.forEach(s=>{
-      s.tripKm = (rt?2:1)*s.km;
-      s.tripL = s.tripKm*conso/100;
-      s.tripCost = s.tripL*s.price;
-      s.total = liters*s.price + s.tripCost;
-    });
-    st.sort((a,b)=>a.total-b.total);
-    render(st, {fuel,liters,rt});
-    setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
-  }catch(e){ setStatus(e.message||"Une erreur est survenue.", true); }
-}
-
-function render(st, o){
-  const best = st[0];
-  const nearest = st.reduce((a,b)=>a.km<b.km?a:b);
-  const worst = st[st.length-1];
-  const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
-  const vsNear = nearest.total-best.total;
-  $("best").style.display="block";
-  $("best").innerHTML = `
-    <div>Le plus rentable : ${esc(best.adresse)}, ${esc(best.cp)} ${esc(best.ville)}</div>
-    <div class="big">${fmt(best.total)} € pour ${o.liters} L</div>
-    <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €</div>
-    <div style="margin-top:8px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(vsNear)} €</b> par rapport à la station la plus proche (${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
-    Jusqu'à <b>${fmt(worst.total-best.total)} €</b> d'écart avec la pire option.</div>
-    <p style="margin:12px 0 0"><a href="${nav(best)}" target="_blank" rel="noopener">➜ Itinéraire vers cette station</a></p>`;
-  $("resultsPanel").style.display="block";
-  $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
-    <td data-l="Rang">${i+1}</td>
-    <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener">${esc(s.adresse)}</a><br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · maj "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span></td>
-    <td class="n" data-l="Prix/L">${fmt(s.price,3)} €</td>
-    <td class="n" data-l="Distance">${fmt(s.km,1)} km</td>
-    <td class="n" data-l="Trajet">${fmt(s.tripCost)} €</td>
-    <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
-    <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
-  drawMap(st);
-}
-function drawMap(st){
-  if(typeof L==="undefined") return;
-  $("map").style.display="block";
-  if(!map){ map=L.map("map"); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map); }
-  if(layer) layer.remove();
-  layer = L.layerGroup().addTo(map);
-  L.circleMarker([origin.lat,origin.lon],{radius:9,color:"#0a5cff",fillOpacity:1}).bindPopup("Départ").addTo(layer);
-  st.forEach((s,i)=>{
-    L.circleMarker([s.lat,s.lon],{radius:i?6:11,color:i?"#e6261f":"#00a05a",fillOpacity:.9})
-      .bindPopup(`<b>${i+1}. ${esc(s.adresse)}</b><br>${esc(s.ville)}<br>${fmt(s.price,3)} €/L – total ${fmt(s.total)} €`).addTo(layer);
-  });
-  map.invalidateSize();
-  map.fitBounds(L.latLngBounds([[origin.lat,origin.lon],...st.map(s=>[s.lat,s.lon])]).pad(0.1));
-}
-}
-</script>
+<script src="cars.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
