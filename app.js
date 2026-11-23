@@ -576,7 +576,7 @@ async function search(){
   const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked, noToll=$("notoll").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0) && !isEV()) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save(); $("carHits").innerHTML=""; render.done=false; $("carBox").classList.add("closed"); updSummary();
+  save(); $("carHits").innerHTML=""; render.done=false; if(typeof setView==="function" && VIEW!=="list") setView("list"); $("carBox").classList.add("closed"); updSummary();
   try{
     if(!origin){
       const q=$("addr").value.trim();
