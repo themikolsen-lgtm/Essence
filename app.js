@@ -721,6 +721,40 @@ function loadLeaflet(){
   return leafletP;
 }
 let tiles = null;
+// ---------- fonds de carte au choix (gratuits, sans clé), avec bascule si un fond ne répond pas ----------
+const BASES = {
+  plan:  {label:"Plan", srcs:[["https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}],["https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",{subdomains:"abc",maxZoom:19}]], attr:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', darkFilter:true},
+  clair: {label:"Clair", srcs:[["https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}],["https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}]], dark:[["https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19}]], attr:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © CARTO'},
+  sat:   {label:"Satellite", srcs:[["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19}]], attr:'Imagerie © Esri'}
+};
+const getBase = () => { try{ return BASES[localStorage.getItem("essence_base")] ? localStorage.getItem("essence_base") : "plan"; }catch(e){ return "plan"; } };
+function setBase(key){
+  if(!map) return;
+  try{ localStorage.setItem("essence_base", key); }catch(e){}
+  const B = BASES[key], dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const srcs = (dark && B.dark) ? B.dark.concat(B.srcs) : B.srcs;
+  $("map").classList.toggle("dark", dark && !!B.darkFilter);
+  let k = 0;
+  const use = i => {
+    if(tiles) tiles.remove();
+    tiles = L.tileLayer(srcs[i][0], {...srcs[i][1], attribution:B.attr}).addTo(map);
+    let errors = 0, loaded = 0;
+    tiles.on("tileload", ()=>{ loaded++; });
+    tiles.on("tileerror", ()=>{ errors++; if(errors>=4 && loaded===0 && k < srcs.length-1){ k++; use(k); } });
+  };
+  use(0);
+  document.querySelectorAll(".basesw button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.base===key));
+}
+function addBaseSwitch(){
+  const C = L.Control.extend({ options:{position:"topright"}, onAdd(){
+    const d = L.DomUtil.create("div","basesw");
+    d.innerHTML = Object.entries(BASES).map(([k,b])=>`<button type="button" data-base="${k}" aria-pressed="${k===getBase()}">${b.label}</button>`).join("");
+    L.DomEvent.disableClickPropagation(d);
+    d.addEventListener("click", ev=>{ const b = ev.target.closest("button[data-base]"); if(b) setBase(b.dataset.base); });
+    return d; }});
+  new C().addTo(map);
+}
+
 function popupHTML(s,i){
   const nav = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   const ev = !!s.ch;
@@ -737,26 +771,8 @@ function drawMap(st){
   if(!window.L || !window.L.map){ if(!leafletP) loadLeaflet().then(()=>{ if(window.L && window.L.map) drawMap(st); }).catch(()=>{}); return; }
   if($("map").hidden) return;
   // fond de carte OpenStreetMap ; en mode sombre il est assombri par un filtre (voir #map.dark)
-  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
-  $("map").classList.toggle("dark", dark);
-  if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); }
-  if(!tiles){
-    const SOURCES = [
-      ["https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}],
-      ["https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {subdomains:"abc", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · OSM France'}],
-      ["https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {subdomains:"abcd", maxZoom:19, attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © CARTO'}]
-    ];
-    let src = 0, errors = 0, loaded = 0;
-    const use = i => {
-      if(tiles) tiles.remove();
-      tiles = L.tileLayer(SOURCES[i][0], SOURCES[i][1]).addTo(map);
-      errors = 0; loaded = 0;
-      tiles.on("tileload", ()=>{ loaded++; });
-      // si les images de ce fond n'arrivent pas, on passe au suivant
-      tiles.on("tileerror", ()=>{ errors++; if(errors>=4 && loaded===0 && src < SOURCES.length-1){ src++; use(src); } });
-    };
-    use(0);
-  }
+  if(!map){ map = L.map("map",{zoomControl:false, attributionControl:true}); L.control.zoom({position:"bottomright"}).addTo(map); addBaseSwitch(); }
+  if(!tiles) setBase(getBase());
   if(layer) layer.remove();
   layer = L.layerGroup().addTo(map);
   // vous êtes ici : point bleu qui pulse
