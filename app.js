@@ -89,11 +89,11 @@ function updQ(){
   $("pleinOut").textContent = litersToBuy()>0 ? litersToBuy()+" L" : "–";
 }
 document.querySelectorAll('input[name=qmode]').forEach(r=>r.addEventListener("change",()=>{updQ();save();}));
-["tank","gauge","liters","fuel","conso","radius","roundtrip"].forEach(id=>$(id).addEventListener("change",()=>{updQ();save();}));
+["tank","gauge","liters","fuel","conso","radius","roundtrip","notoll"].forEach(id=>$(id).addEventListener("change",()=>{updQ();save();}));
 
 // ---------- préférences ----------
 function save(){ store.set("prefs2",{car:car?ENTRIES.indexOf(car):null,carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
-  qmode:qmode(),tank:$("tank").value,gauge:$("gauge").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked}); }
+  qmode:qmode(),tank:$("tank").value,gauge:$("gauge").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
 fillFuels(Object.keys(FUELS));
 if(p){
@@ -104,6 +104,7 @@ if(p){
   if(p.qmode) document.querySelector(`input[name=qmode][value=${p.qmode}]`).checked=true;
   ["tank","gauge","liters","radius"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
   $("roundtrip").checked = p.rt!==false;
+  $("notoll").checked = !!p.nt;
 }
 updQ();
 
@@ -244,19 +245,34 @@ async function addBrands(o, list){
     }catch(e){} finally{ clearTimeout(t); }
   }
 }
-async function roadDistances(o, list){
+const TOLL_EUR_KM = 0.11;
+async function roadDistances(o, list, noToll){
   const coords = [o,...list].map(p=>`${p.lon.toFixed(5)},${p.lat.toFixed(5)}`).join(";");
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 5000);
   try{
-    const r = await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`,{signal:ctrl.signal}).then(r=>r.json());
+    const base = `https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=distance,duration`;
+    let r = await fetch(base+(noToll?"&exclude=toll":""),{signal:ctrl.signal}).then(r=>r.json());
+    if(r.code!=="Ok" && noToll) r = await fetch(base,{signal:ctrl.signal}).then(r=>r.json());
     if(r.code!=="Ok") return;
     list.forEach((s,i)=>{ const d=r.distances[0][i+1], du=r.durations[0][i+1]; if(d!=null){ s.km=d/1000; s.min=du/60; s.road=true; } });
   }catch(e){} finally{ clearTimeout(t); }
 }
 
+// km sur autoroute à péage, d'après l'itinéraire détaillé
+async function tollKm(o, s){
+  const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 5000);
+  try{
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${o.lon.toFixed(5)},${o.lat.toFixed(5)};${s.lon.toFixed(5)},${s.lat.toFixed(5)}?overview=false&steps=true`,{signal:ctrl.signal}).then(r=>r.json());
+    if(r.code!=="Ok") return null;
+    let km = 0;
+    r.routes[0].legs.forEach(l=>l.steps.forEach(st=>{ if((st.intersections||[]).some(i=>(i.classes||[]).includes("toll"))) km += st.distance/1000; }));
+    return km;
+  }catch(e){ return null; } finally{ clearTimeout(t); }
+}
+
 // ---------- calcul ----------
 async function search(){
-  const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked;
+  const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked, noToll=$("notoll").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0)) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
   save(); $("carHits").innerHTML=""; render.done=false;
@@ -279,10 +295,11 @@ async function search(){
       st.forEach(s=>{
         s.tripKm = (rt?2:1)*s.km;
         s.tripCost = s.tripKm*conso/100*s.price;
-        s.total = liters*s.price + s.tripCost;
+        s.tollCost = noToll ? 0 : (s.tollKm||0)*TOLL_EUR_KM*(rt?2:1);
+        s.total = liters*s.price + s.tripCost + s.tollCost;
       });
       st.sort((a,b)=>a.total-b.total);
-      render(st, {fuel,liters,rt});
+      render(st, {fuel,liters,rt,noToll});
     };
     // 1) résultat immédiat avec distances estimées
     progress(70,"Calcul du plus rentable…");
@@ -291,8 +308,18 @@ async function search(){
     // 2) affinage : distances réelles par la route (+ enseignes manquantes), sans bloquer l'affichage
     progress(85,"Distances exactes par la route…");
     const missing = st.filter(s=>!s.brand);
-    await Promise.all([roadDistances(origin, st), missing.length>3 && !Object.keys(brands).length ? addBrands(origin, missing) : null]);
+    await Promise.all([roadDistances(origin, st, noToll), missing.length>3 && !Object.keys(brands).length ? addBrands(origin, missing) : null]);
     finish();
+    // péages : on vérifie l'itinéraire des stations en tête, jusqu'à ce que le classement soit stable
+    if(!noToll){
+      progress(93,"Vérification des péages…");
+      for(let round=0; round<3; round++){
+        const todo = st.slice(0,6).filter(s=>s.tollKm===undefined);
+        if(!todo.length) break;
+        await Promise.all(todo.map(async s=>{ const k = await tollKm(origin, s); s.tollKm = k ?? 0; }));
+        finish();
+      }
+    }
     progress(100,"Terminé ✓");
     setStatus(`${st.length} stations comparées autour de ${origin.label}.`);
   }catch(e){ progress(null); setStatus(e.message||"Une erreur est survenue.", true); }
@@ -308,7 +335,7 @@ function render(st, o){
     <div class="big">${esc(sName(best))}</div>
     <div>${esc(best.adresse)}, ${esc(best.cp)} ${esc(best.ville)}</div>
     <div class="big" style="margin-top:6px">${fmt(best.total)} € <span style="font-size:.5em">pour ${o.liters} L</span></div>
-    <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €</div>
+    <div>${FUELS[o.fuel]} à ${fmt(best.price,3)} €/L · ${fmt(best.km,1)} km${best.road?"":" (estimés)"} · ~${Math.round(best.min)} min · trajet ${o.rt?"aller-retour ":""}: ${fmt(best.tripCost)} €${best.tollCost>0?` + péage ~${fmt(best.tollCost)} €`:""}</div>
     <div style="margin:10px 0 14px">${best===nearest?"C'est aussi la station la plus proche. ":`Vous économisez <b>${fmt(nearest.total-best.total)} €</b> par rapport à la plus proche (${esc(sName(nearest))}, ${esc(nearest.ville)}, ${fmt(nearest.price,3)} €/L). `}
     Jusqu'à <b>${fmt(worst.total-best.total)} €</b> d'écart avec la pire option.</div>
     <a href="${nav(best)}" target="_blank" rel="noopener">Itinéraire  ›</a>`;
@@ -316,7 +343,7 @@ function render(st, o){
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
     <td data-l="Rang">${i+1}</td>
     <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(sName(s))}</b></a><br>${esc(s.adresse)}<br><span class="muted">${esc(s.cp)} ${esc(s.ville)}${s.maj?" · prix du "+new Date(s.maj).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):""}</span>
-      <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span></div></td>
+      <div class="meta"><span>${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km${s.road?"":"*"}</span><span>trajet ${fmt(s.tripCost)} €</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}</div></td>
     <td class="n" data-l="Coût total"><b>${fmt(s.total)} €</b></td>
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td></tr>`).join("");
   drawMap(st);

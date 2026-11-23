@@ -51,6 +51,7 @@ button{cursor:pointer;font-weight:600}
 @keyframes rot{to{transform:rotate(360deg)}}
 #go.busy .spin{display:inline-block}#go.busy{opacity:.85}
 .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.meta .toll{border-color:var(--amber);background:light-dark(#fff6dc,#3a2e00)}
 .meta span{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:13px;white-space:nowrap}
 .geohelp{display:none;margin-top:10px;padding:12px 14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:15px}
 .geohelp.on{display:block}.geohelp ol{margin:6px 0 0;padding-left:20px}.geohelp li{margin:3px 0}
@@ -112,6 +113,8 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
       <button id="go" class="primary"><span class="spin"></span><span id="golbl">Trouver la station la plus rentable</span></button>
     </div>
     <p style="margin:12px 0 0"><label class="check"><input type="checkbox" id="roundtrip" checked> Compter l'aller-retour (je reviens ensuite à mon point de départ)</label></p>
+    <p style="margin:8px 0 0"><label class="check"><input type="checkbox" id="notoll"> Éviter les autoroutes à péage</label></p>
+    <p class="muted" style="margin:4px 0 0">Sinon, le péage est ajouté au coût (estimation 0,11 €/km sur les portions payantes, voiture classe 1).</p>
     <div id="prog" class="prog"><div class="ptxt" id="ptxt"></div><div class="ptrack"><div class="pbar" id="pbar"></div></div></div>
     <p id="status"></p>
     <div id="geohelp" class="geohelp"></div>
@@ -123,13 +126,13 @@ tr.top td{background:light-dark(#e6f6ee,#10281c)}
   <section class="panel" id="resultsPanel" style="display:none">
     <h2>Toutes les stations, de la plus rentable à la moins rentable</h2>
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
-    <p class="muted">Coût total = litres à mettre × prix + carburant consommé pour le trajet × prix. Distances par la route (OSRM) quand c'est possible, sinon estimées à vol d'oiseau × 1,3. Prix : flux officiel prix-carburants.gouv.fr.</p>
+    <p class="muted">Coût total = litres à mettre × prix + carburant consommé pour le trajet × prix + péage éventuel. Distances par la route (OSRM) quand c'est possible, sinon estimées à vol d'oiseau × 1,3. Prix : flux officiel prix-carburants.gouv.fr.</p>
   </section>
-  <p class="muted" style="text-align:center">Version 20261123b</p>
+  <p class="muted" style="text-align:center">Version 20261123c</p>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="cars.js?v=20261123b"></script>
-<script src="app.js?v=20261123b"></script>
+<script src="cars.js?v=20261123c"></script>
+<script src="app.js?v=20261123c"></script>
 </body>
 </html>
