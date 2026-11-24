@@ -160,21 +160,10 @@ const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // en-tête : titre selon l'onglet et le mode, pastille du véhicule en cours
 function updHeader(){
   const log = !$("tabLog").hidden;
-  const h = document.querySelector("header");
-  h.classList.toggle("compact", log); if(log) h.classList.remove("stuck");
-  window.ESSENCE_HEADER_FIT?.();
   $("hTitle").textContent = log ? "Mon carnet" : (isEV() ? "Où recharger ?" : "Où faire le plein ?");
   $("hSub").textContent = log ? "Suivi de votre consommation" : (isEV() ? "La borne la plus avantageuse" : "Le moins cher, trajet compris");
 }
 window.ESSENCE_HEADER = updHeader;
-// onglets épinglés : seule la ligne du titre défile
-(function(){
-  const h = document.querySelector("header"), t = h.querySelector(".tabs");
-  const fit = () => { h.style.top = h.classList.contains("compact") ? "0px" : -(t.offsetTop - 6) + "px"; };
-  fit(); addEventListener("resize", fit);
-  addEventListener("scroll", () => h.classList.toggle("stuck", !h.classList.contains("compact") && scrollY > t.offsetTop), {passive:true});
-  window.ESSENCE_HEADER_FIT = fit;
-})();
 function updSummary(){
   const pl = "";
   $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""}` : `${FUELS[$("fuel").value]||"Carburant"} · sans modèle précis`);
