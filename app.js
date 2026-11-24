@@ -164,6 +164,7 @@ function updHeader(){
   $("hSub").textContent = log ? "Suivi de votre consommation" : (isEV() ? "La borne la plus avantageuse" : "Le moins cher, trajet compris");
 }
 window.ESSENCE_HEADER = updHeader;
+addEventListener("scroll", () => document.querySelector("header").classList.toggle("shadow", scrollY > 4), {passive:true});
 function updSummary(){
   const pl = "";
   $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""}` : `${FUELS[$("fuel").value]||"Carburant"} · sans modèle précis`);
