@@ -288,10 +288,16 @@ function renderGarage(){
   $("plate").value = v?.plate || "";
   const many = garage.list.length > 1, editing = !$("carBox").classList.contains("closed");
   $("vehDel").hidden = !many;
-  $("garage").innerHTML = many ? garage.list.map(x=>{
+  // favori : bouton dans les réglages
+  const fav = !!v?.fav;
+  $("vehFav").setAttribute("aria-pressed", fav);
+  $("vehFav").textContent = fav ? "★ Favori" : "☆ Ajouter aux favoris";
+  // liste des véhicules : favoris en premier, avec une étoile
+  const ordered = [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  $("garage").innerHTML = many ? ordered.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
       const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
-      return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}">${label}</button>`;
+      return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}${x.fav?" (favori)":""}">${x.fav?`<span class="star" aria-hidden="true">★</span>`:""}${label}</button>`;
     }).join("") + (editing ? "" : `<button type="button" class="add" data-add="1" aria-label="Ajouter un véhicule">+</button>`) : "";
   updSummary();
 }
@@ -325,6 +331,11 @@ $("vehDel").addEventListener("click", ()=>{
   window.dispatchEvent(new Event("essence-vehicle"));
 });
 $("vehAdd").addEventListener("click", addVehicle);
+$("vehFav").addEventListener("click", ()=>{
+  const v = activeVeh(); if(!v) return;
+  v.fav = !v.fav; v.u = Date.now(); delete v.blank;
+  writeGarage(); renderGarage();
+});
 $("garage").addEventListener("click", ev=>{
   const b = ev.target.closest("button"); if(!b) return;
   if(b.dataset.add) return addVehicle();
@@ -340,6 +351,9 @@ function initGarage(){
     garage.active = garage.list[0].id; writeGarage();
   } else {
     if(!activeVeh()) garage.active = garage.list[0].id;
+    // à l'ouverture : le véhicule favori est sélectionné automatiquement
+    const fav = garage.list.find(v=>v.fav);
+    if(fav && !activeVeh().fav){ garage.active = fav.id; writeGarage(); }
     if(activeVeh().snap) applySnap(activeVeh().snap);
   }
   renderGarage();
@@ -347,6 +361,12 @@ function initGarage(){
 window.ESSENCE_VEHICLE = () => garage.active;
 window.ESSENCE_FIRST_VEHICLE = () => garage.list[0]?.id;
 window.ESSENCE_PLATE = () => activeVeh()?.plate || "";
+// pour le carnet : la liste des véhicules (favoris en premier) et le changement de véhicule
+window.ESSENCE_GARAGE = () => [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)).map(x=>{
+  const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
+  return {id:x.id, fav:!!x.fav, active:x.id===garage.active, label: k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule")};
+});
+window.ESSENCE_SWITCH = id => switchVehicle(id);
 
 let RESTORING = true;
 function save(){ if(!RESTORING){ try{ localStorage.setItem("essence_prefs_at", String(Date.now())); }catch(e){} saveVehicle(); }

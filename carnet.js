@@ -81,7 +81,15 @@ function setForm(open){
   $("addFill").hidden = open;
   if(open) setTimeout(()=>{ $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"}); }, 30);
 }
+function renderVehicles(){
+  const list = window.ESSENCE_GARAGE?.() || [];
+  const box = $("logVeh");
+  box.hidden = list.length < 2;
+  box.innerHTML = list.map(v=>`<button type="button" data-veh="${v.id}" aria-pressed="${v.active}">${v.fav?`<span class="star" aria-hidden="true">★</span>`:""}${esc(v.label)}</button>`).join("");
+}
+$("logVeh").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-veh]"); if(b && b.getAttribute("aria-pressed")!=="true") window.ESSENCE_SWITCH?.(b.dataset.veh); });
 function render(){
+  renderVehicles();
   const s = stats();
   const carInfo = window.ESSENCE_CAR?.();
   // --- bloc principal ---
