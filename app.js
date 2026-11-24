@@ -157,6 +157,25 @@ $("noCar").addEventListener("click", ()=>{
 $("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary(); save(); } });
 const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
+// en-tête : titre selon l'onglet et le mode, pastille du véhicule en cours
+const CAR_ICO = '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17h14M6 17v2M18 17v2M4 13l2-6h12l2 6v4H4z"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg>';
+function updHeader(){
+  const log = !$("tabLog").hidden;
+  $("hTitle").textContent = log ? "Mon carnet" : (isEV() ? "Où recharger ?" : "Où faire le plein ?");
+  const v = typeof activeVeh==="function" ? activeVeh() : null;
+  const name = car ? `${car.brand} ${car.model}` : (v && !v.blank ? `${FUELS[$("fuel").value]||"Carburant"} · sans modèle` : "");
+  $("hSub").innerHTML = name
+    ? CAR_ICO + `<span>${esc(name)}</span>` + (v?.fav ? '<svg class="hstar" viewBox="0 0 24 24" aria-label="favori"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg>' : "")
+    : "Le moins cher, trajet compris";
+}
+window.ESSENCE_HEADER = updHeader;
+// onglets épinglés : seule la ligne du titre défile
+(function(){
+  const h = document.querySelector("header"), t = h.querySelector(".tabs");
+  const fit = () => { h.style.top = -(t.offsetTop - 6) + "px"; };
+  fit(); addEventListener("resize", fit);
+  addEventListener("scroll", () => h.classList.toggle("stuck", scrollY > t.offsetTop), {passive:true});
+})();
 function updSummary(){
   const pl = "";
   $("sumName").innerHTML = (pl ? plateHTML(pl)+"<br>" : "") + esc(car ? `${car.brand} ${car.model}${car.gen?" "+car.gen:""}` : `${FUELS[$("fuel").value]||"Carburant"} · sans modèle précis`);
@@ -182,6 +201,7 @@ function updSummary(){
   document.querySelector("header .logo").innerHTML = ev ? ICON.bolt : ICON.pump;
   document.querySelector("#carBox .sum .ic").innerHTML = car ? ICON.car : (ev ? ICON.bolt : ICON.pump);
   document.querySelector("header p").textContent = ev ? "Charge rapide et pas chère, et quoi faire à côté" : "Le moins cher, trajet compris";
+  try{ updHeader(); }catch(e){}
 }
 function setCarOpen(open){
   if(!open && !(+$("conso").value>0)) open = true;
@@ -251,6 +271,9 @@ const carKey = e => e ? [e.brand,e.model,e.gen,e.eng].join("|") : null;
 const GKEY = "essence_garage";
 let garage = {list:[], active:null, del:[]};
 const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+// ordre d'affichage : favoris d'abord, puis par date d'ajout (l'identifiant commence par l'heure de création)
+const addedAt = v => parseInt(String(v.id).slice(0,8),36) || 0;
+const vehOrder = list => [...list].sort((a,b)=>((b.fav?1:0)-(a.fav?1:0)) || (addedAt(a)-addedAt(b)));
 const activeVeh = () => garage.list.find(v=>v.id===garage.active) || garage.list[0];
 function normPlate(t){
   const c = String(t||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
@@ -293,9 +316,9 @@ function renderGarage(){
   $("vehFav").setAttribute("aria-pressed", fav);
   $("vehFavTxt").textContent = fav ? "Favori" : "Mettre en favori";
   // liste des véhicules : favoris en premier, avec une étoile
-  const ordered = [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+  const ordered = vehOrder(garage.list);
   const addBtn = editing ? "" : `<button type="button" class="add${many?"":" addone"}" data-add="1" aria-label="Ajouter un véhicule">${many?"+":"+ Véhicule"}</button>`;
-  $("garage").innerHTML = !many ? (v?.snap?.carKey || v?.snap?.fuel ? addBtn : "") : ordered.map(x=>{
+  $("garage").innerHTML = !many ? (v && (v.snap?.carKey || car || !v.blank) ? addBtn : "") : ordered.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
       const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
       return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}${x.fav?" (favori)":""}">${x.fav?`<span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></span>`:""}${label}</button>`;
@@ -335,7 +358,7 @@ $("vehDel").addEventListener("click", ()=>{
 $("vehFav").addEventListener("click", ()=>{
   const v = activeVeh(); if(!v) return;
   v.fav = !v.fav; v.u = Date.now(); delete v.blank;
-  writeGarage(); renderGarage();
+  writeGarage(); renderGarage(); updHeader();
   const b = $("vehFav"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
   if(v.fav){
     try{ navigator.vibrate?.(15); }catch(e){}
@@ -375,7 +398,7 @@ window.ESSENCE_VEHICLE = () => garage.active;
 window.ESSENCE_FIRST_VEHICLE = () => garage.list[0]?.id;
 window.ESSENCE_PLATE = () => activeVeh()?.plate || "";
 // pour le carnet : la liste des véhicules (favoris en premier) et le changement de véhicule
-window.ESSENCE_GARAGE = () => [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0)).map(x=>{
+window.ESSENCE_GARAGE = () => vehOrder(garage.list).map(x=>{
   const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
   return {id:x.id, fav:!!x.fav, active:x.id===garage.active, label: k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule")};
 });

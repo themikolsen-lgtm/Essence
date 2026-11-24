@@ -24,6 +24,7 @@ function showTab(log){
   $("tabBtnFind").setAttribute("aria-selected", !log); $("tabBtnLog").setAttribute("aria-selected", log);
   try{ history.replaceState(null, "", log ? "#carnet" : location.pathname); }catch(e){}
   if(log) render();
+  window.ESSENCE_HEADER?.();
   window.scrollTo(0,0);
 }
 $("tabBtnFind").onclick = () => showTab(false);
@@ -82,7 +83,8 @@ function setForm(open){
   if(open) setTimeout(()=>{ $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"}); }, 30);
 }
 function renderVehicles(){
-  const list = window.ESSENCE_GARAGE?.() || [];
+  // seuls les véhicules favoris (et celui en cours) apparaissent dans le carnet
+  const list = (window.ESSENCE_GARAGE?.() || []).filter(v=>v.fav || v.active);
   const box = $("logVeh");
   box.hidden = list.length < 2;
   box.innerHTML = list.map(v=>`<button type="button" data-veh="${v.id}" aria-pressed="${v.active}">${v.fav?`<span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></span>`:""}${esc(v.label)}</button>`).join("");
