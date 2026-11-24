@@ -291,13 +291,13 @@ function renderGarage(){
   // favori : bouton dans les réglages
   const fav = !!v?.fav;
   $("vehFav").setAttribute("aria-pressed", fav);
-  $("vehFav").textContent = fav ? "★ Favori" : "☆ Ajouter aux favoris";
+  $("vehFavTxt").textContent = fav ? "Favori" : "Mettre en favori";
   // liste des véhicules : favoris en premier, avec une étoile
   const ordered = [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
   $("garage").innerHTML = many ? ordered.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
       const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
-      return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}${x.fav?" (favori)":""}">${x.fav?`<span class="star" aria-hidden="true">★</span>`:""}${label}</button>`;
+      return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}${x.fav?" (favori)":""}">${x.fav?`<span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></span>`:""}${label}</button>`;
     }).join("") + (editing ? "" : `<button type="button" class="add" data-add="1" aria-label="Ajouter un véhicule">+</button>`) : "";
   updSummary();
 }
@@ -335,6 +335,18 @@ $("vehFav").addEventListener("click", ()=>{
   const v = activeVeh(); if(!v) return;
   v.fav = !v.fav; v.u = Date.now(); delete v.blank;
   writeGarage(); renderGarage();
+  const b = $("vehFav"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+  if(v.fav){
+    try{ navigator.vibrate?.(15); }catch(e){}
+    const ico = b.querySelector(".favico"), x = ico.offsetLeft + ico.offsetWidth/2;
+    const cols = ["#f5a524","#ff5a1f","#ffd27a","#34c759"];
+    for(let i=0;i<10;i++){
+      const a = i/10*Math.PI*2, d = 26 + (i%3)*8, sp = document.createElement("i");
+      sp.className = "spark";
+      sp.style.cssText = `--x:${x}px;--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px;--c:${cols[i%4]}`;
+      b.appendChild(sp); setTimeout(()=>sp.remove(), 650);
+    }
+  }
 });
 $("garage").addEventListener("click", ev=>{
   const b = ev.target.closest("button"); if(!b) return;

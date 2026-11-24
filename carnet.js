@@ -85,7 +85,7 @@ function renderVehicles(){
   const list = window.ESSENCE_GARAGE?.() || [];
   const box = $("logVeh");
   box.hidden = list.length < 2;
-  box.innerHTML = list.map(v=>`<button type="button" data-veh="${v.id}" aria-pressed="${v.active}">${v.fav?`<span class="star" aria-hidden="true">★</span>`:""}${esc(v.label)}</button>`).join("");
+  box.innerHTML = list.map(v=>`<button type="button" data-veh="${v.id}" aria-pressed="${v.active}">${v.fav?`<span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></span>`:""}${esc(v.label)}</button>`).join("");
 }
 $("logVeh").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-veh]"); if(b && b.getAttribute("aria-pressed")!=="true") window.ESSENCE_SWITCH?.(b.dataset.veh); });
 function render(){
