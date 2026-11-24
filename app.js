@@ -317,7 +317,7 @@ function renderGarage(){
   $("vehFavTxt").textContent = fav ? "Favori" : "Mettre en favori";
   // liste des véhicules : favoris en premier, avec une étoile
   const ordered = vehOrder(garage.list);
-  const addBtn = editing ? "" : `<button type="button" class="add${many?"":" addone"}" data-add="1" aria-label="Ajouter un véhicule">${many?"+":"+ Véhicule"}</button>`;
+  const addBtn = !editing ? "" : `<button type="button" class="add${many?"":" addone"}" data-add="1" aria-label="Ajouter un véhicule">${many?"+":"+ Véhicule"}</button>`;
   $("garage").innerHTML = !many ? (v && (v.snap?.carKey || car || !v.blank) ? addBtn : "") : ordered.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
       const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
