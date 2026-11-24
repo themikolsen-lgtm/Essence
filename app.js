@@ -205,6 +205,7 @@ function updSoc(){
   let now = +$("socNow").value, tgt = +$("socTarget").value;
   if(tgt <= now){ tgt = Math.min(100, Math.ceil((now+5)/5)*5); $("socTarget").value = tgt; }
   $("socNowV").textContent = now+" %"; $("socTargetV").textContent = tgt+" %";
+  [["socNow",now],["socTarget",tgt]].forEach(([id,v])=>{ const r=$(id); r.style.setProperty("--p", ((v-r.min)/(r.max-r.min)*100)+"%"); });
   $("socNowBar").style.width = now+"%";
   $("socTgtBar").style.left = now+"%"; $("socTgtBar").style.width = (tgt-now)+"%";
 }
