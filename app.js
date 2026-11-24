@@ -294,11 +294,12 @@ function renderGarage(){
   $("vehFavTxt").textContent = fav ? "Favori" : "Mettre en favori";
   // liste des véhicules : favoris en premier, avec une étoile
   const ordered = [...garage.list].sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
-  $("garage").innerHTML = many ? ordered.map(x=>{
+  const addBtn = editing ? "" : `<button type="button" class="add${many?"":" addone"}" data-add="1" aria-label="Ajouter un véhicule">${many?"+":"+ Véhicule"}</button>`;
+  $("garage").innerHTML = !many ? (v?.snap?.carKey || v?.snap?.fuel ? addBtn : "") : ordered.map(x=>{
       const k = x.snap?.carKey ? x.snap.carKey.split("|") : null;
       const label = esc(k ? k[0]+" "+k[1] : (FUELS[x.snap?.fuel] ? FUELS[x.snap.fuel]+" (sans modèle)" : "Véhicule"));
       return `<button type="button" data-v="${x.id}" aria-pressed="${x.id===garage.active}" title="${esc(k?k[0]+" "+k[1]:"")}${x.fav?" (favori)":""}">${x.fav?`<span class="star" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg></span>`:""}${label}</button>`;
-    }).join("") + (editing ? "" : `<button type="button" class="add" data-add="1" aria-label="Ajouter un véhicule">+</button>`) : "";
+    }).join("") + addBtn;
   updSummary();
 }
 function switchVehicle(id){
@@ -330,7 +331,7 @@ $("vehDel").addEventListener("click", ()=>{
   applySnap(activeVeh().snap||{}); save(); renderGarage();
   window.dispatchEvent(new Event("essence-vehicle"));
 });
-$("vehAdd").addEventListener("click", addVehicle);
+
 $("vehFav").addEventListener("click", ()=>{
   const v = activeVeh(); if(!v) return;
   v.fav = !v.fav; v.u = Date.now(); delete v.blank;
