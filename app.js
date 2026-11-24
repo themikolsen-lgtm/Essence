@@ -1096,4 +1096,30 @@ async function loadNearby(s, box){
   }catch(e){ if(box.isConnected) box.innerHTML = `<span class="muted" style="color:inherit;opacity:.85">Impossible de charger les lieux à proximité. <button type="button" class="linkish" data-retry-near>Réessayer</button></span>`; }
 }
 
+
+// ---- Thème : Auto (comme le téléphone), Clair ou Sombre ----
+{
+  const sys = matchMedia("(prefers-color-scheme: dark)");
+  const darkRules = [];
+  for(const sh of document.styleSheets){ try{ for(const r of sh.cssRules) if(r.media && /prefers-color-scheme:\s*dark/.test(r.media.mediaText)) darkRules.push([r, r.media.mediaText]); }catch(e){} }
+  const metas = [...document.querySelectorAll('meta[name="theme-color"]')].map(m=>[m, m.getAttribute("media")]);
+  function applyTheme(t){
+    const root = document.documentElement;
+    root.style.colorScheme = (t==="light"||t==="dark") ? t : "";
+    const dark = t==="dark" || (t!=="light" && sys.matches);
+    for(const [r, orig] of darkRules) r.media.mediaText = t==="auto" ? orig : (dark ? "all" : "not all");
+    for(const [m, orig] of metas){
+      const isDarkMeta = /dark/.test(orig||"");
+      if(t==="auto") m.setAttribute("media", orig); else m.setAttribute("media", isDarkMeta===dark ? "all" : "not all");
+    }
+    document.querySelectorAll(".themesw button").forEach(b=>b.setAttribute("aria-checked", b.dataset.theme===t));
+  }
+  let theme = "auto"; try{ theme = localStorage.getItem("essence_theme") || "auto"; }catch(e){}
+  applyTheme(theme);
+  document.querySelector(".themesw")?.addEventListener("click", ev=>{
+    const b = ev.target.closest("button[data-theme]"); if(!b) return;
+    theme = b.dataset.theme; try{ localStorage.setItem("essence_theme", theme); }catch(e){}
+    applyTheme(theme);
+  });
+}
 }

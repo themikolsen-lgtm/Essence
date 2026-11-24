@@ -6,7 +6,7 @@
 <title>Essence – le plein le plus rentable</title>
 <script>
 /* mise à jour automatique : si une version plus récente est en ligne, on recharge sans le cache */
-window.APP_V="202611241541";
+window.APP_V="202611241543";
 (function(){try{
   fetch("version.txt?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():null}).then(function(v){
     v=(v||"").trim(); if(!v||v===window.APP_V) return;
@@ -639,6 +639,11 @@ header .tabs{background:var(--field)}
 header .tabs button{color:var(--muted)}
 header .tabs button[aria-selected=true]{background:var(--accent);color:#fff}
 header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
+/* Choix du thème (bas de page) */
+.themesw{display:flex;align-items:center;justify-content:center;gap:6px;margin:18px auto 4px;font-size:14px}
+.themesw .muted{margin-right:4px}
+.themesw button{width:auto;min-height:38px;padding:0 14px;border-radius:999px;background:var(--field);color:var(--ink);font-size:14px;font-weight:600}
+.themesw button[aria-checked=true]{background:var(--accent);color:#fff}
 [hidden]{display:none!important}
 
 /* Repères de la carte */
@@ -662,6 +667,7 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+<script>try{var t=localStorage.getItem("essence_theme");if(t==="light"||t==="dark")document.documentElement.style.colorScheme=t;}catch(e){}</script>
 </head>
 <body>
 <header><div class="hrow"><span class="logo"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v17"/><path d="M2 22h13"/><path d="M6.5 8h5"/><path d="M14 10h2a2 2 0 0 1 2 2v4a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg></span><div class="htxt"><h1 id="hTitle">Où faire le plein ?</h1><p id="hSub">Le moins cher, trajet compris</p></div><button type="button" id="acctBtn" class="acct" hidden aria-label="Mon compte"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button></div>
@@ -796,7 +802,13 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
     <table class="stack"><thead><tr><th>#</th><th>Station</th><th class="n">Coût total</th><th class="n">Écart</th></tr></thead><tbody id="rows"></tbody></table>
     <p class="muted" id="resNote">Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).</p>
   </section>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · <button type="button" id="clearCache" class="linkish">Vider le cache</button> · v202611241541</p>
+  <div class="themesw" role="radiogroup" aria-label="Thème">
+    <span class="muted">Thème</span>
+    <button type="button" role="radio" data-theme="auto">Auto</button>
+    <button type="button" role="radio" data-theme="light">Clair</button>
+    <button type="button" role="radio" data-theme="dark">Sombre</button>
+  </div>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · <button type="button" id="clearCache" class="linkish">Vider le cache</button> · v202611241543</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -855,10 +867,10 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611241541"></script>
-<script src="app.js?v=202611241541"></script>
-<script src="carnet.js?v=202611241541"></script>
-<script src="firebase-config.js?v=202611241541"></script>
-<script type="module" src="compte.js?v=202611241541"></script>
+<script src="cars.js?v=202611241543"></script>
+<script src="app.js?v=202611241543"></script>
+<script src="carnet.js?v=202611241543"></script>
+<script src="firebase-config.js?v=202611241543"></script>
+<script type="module" src="compte.js?v=202611241543"></script>
 </body>
 </html>
