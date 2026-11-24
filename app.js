@@ -158,15 +158,10 @@ $("fuel").addEventListener("change", ()=>{ if(!car){ noCarDefaults(); updSummary
 const goLabel = () => isEV() ? "Trouver une borne" : "Trouver la station";
 // bandeau voiture : replié une fois la voiture choisie
 // en-tête : titre selon l'onglet et le mode, pastille du véhicule en cours
-const CAR_ICO = '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17h14M6 17v2M18 17v2M4 13l2-6h12l2 6v4H4z"/><circle cx="8" cy="14" r=".6"/><circle cx="16" cy="14" r=".6"/></svg>';
 function updHeader(){
   const log = !$("tabLog").hidden;
   $("hTitle").textContent = log ? "Mon carnet" : (isEV() ? "Où recharger ?" : "Où faire le plein ?");
-  const v = typeof activeVeh==="function" ? activeVeh() : null;
-  const name = car ? `${car.brand} ${car.model}` : (v && !v.blank ? `${FUELS[$("fuel").value]||"Carburant"} · sans modèle` : "");
-  $("hSub").innerHTML = name
-    ? CAR_ICO + `<span>${esc(name)}</span>` + (v?.fav ? '<svg class="hstar" viewBox="0 0 24 24" aria-label="favori"><path d="M12 2.8l2.75 5.6 6.17.9-4.46 4.35 1.05 6.14L12 16.9l-5.51 2.89 1.05-6.14L3.08 9.3l6.17-.9z"/></svg>' : "")
-    : "Le moins cher, trajet compris";
+  $("hSub").textContent = log ? "Suivi de votre consommation" : (isEV() ? "La borne la plus avantageuse" : "Le moins cher, trajet compris");
 }
 window.ESSENCE_HEADER = updHeader;
 // onglets épinglés : seule la ligne du titre défile
