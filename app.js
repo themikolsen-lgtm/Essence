@@ -84,17 +84,27 @@ function renderHits(){
 function selectCar(e, closeList=true){
   car = e;
   $("carCard").style.display="block";
-  if(e.fuel==="x"){ $("bat").value=e.bat||50; $("acmax").value=e.ac||11; $("dcmax").value=e.dc||0; }
+  if(e.fuel==="x"){ $("bat").value=e.bat||50; $("acmax").value=e.ac||11; $("dcmax").value=e.dc||0; $("plugs").value = "2"+(e.dc>0?"C":"")+"E"; syncPlugs(); }
   $("carCard").innerHTML = `<div class="muted">Votre voiture</div><div class="nm">${esc(e.brand)} ${esc(e.model)} ${esc(e.gen)} – ${esc(e.eng)}</div>
     <div class="muted">${e.y1}–${e.y2} · ${FUEL_NAME[e.fuel]}</div><div class="cs">${fmt(e.conso,1)} L/100 km</div>
     <div class="muted">Consommation moyenne réelle en usage mixte. Corrigez-la plus bas si vous connaissez la vôtre.</div>`;
   fillFuels(FUEL_KEYS[e.fuel]);
   $("conso").value = e.conso;
   updSummary();
-  if(closeList){ $("carHits").innerHTML=""; setCarOpen(false); setStatus(""); }
+  if(closeList){ $("carHits").innerHTML=""; setCarOpen(false); setStatus(""); if(typeof autoSearch==="function" && !RESTORING) autoSearch(); }
   save();
 }
 const isEV = () => $("fuel").value==="elec";
+// prises acceptées par la voiture (réglage du véhicule)
+const carPlugs = () => new Set(($("plugs").value||"2CE").split(""));
+function syncPlugs(){ const set = carPlugs(); document.querySelectorAll("#plugSel button").forEach(b=>b.setAttribute("aria-pressed", set.has(b.dataset.k))); }
+$("plugSel").addEventListener("click", ev=>{
+  const b = ev.target.closest("button[data-k]"); if(!b) return;
+  const set = carPlugs(); set.has(b.dataset.k) ? set.delete(b.dataset.k) : set.add(b.dataset.k);
+  if(!set.size) set.add(b.dataset.k);   // au moins une prise
+  $("plugs").value = ["2","C","D","E"].filter(k=>set.has(k)).join("");
+  syncPlugs(); $("plugs").dispatchEvent(new Event("change"));
+});
 // stations proches avec leur prix du jour, pour le carnet
 // stations avec leur prix du jour, pour le carnet : proches (triées par distance) + recherche par texte
 async function ensureOrigin(){
@@ -161,6 +171,9 @@ function updSummary(){
   // l'interface s'adapte : carburant ou électrique
   const ev = isEV();
   $("thermBox").style.display = ev?"none":"";
+  const sb = $("socNowBox");
+  if(ev && sb.parentElement.id!=="mainCard"){ $("mainCard").prepend(sb); sb.querySelector(".lbl").textContent = "Batterie actuelle"; }
+  if(!ev && sb.parentElement.id==="mainCard"){ document.querySelector("#evBox .soc").prepend(sb); sb.querySelector(".lbl").textContent = "Batterie au moment de recharger"; }
   $("evBox").style.display = ev?"":"none";
   $("consoLbl").textContent = ev ? "Conso (kWh/100)" : "Conso (L/100)";
   $("conso").max = ev ? 40 : 30;
@@ -196,7 +209,7 @@ function updSoc(){
   $("socTgtBar").style.left = now+"%"; $("socTgtBar").style.width = (tgt-now)+"%";
 }
 ["socNow","socTarget"].forEach(id=>$(id).addEventListener("input", updSoc));
-["fuel","conso","socNow","socTarget","bat","dcmax","acmax"].forEach(id=>{ $(id).addEventListener("input", updSummary); $(id).addEventListener("change", ()=>{ updSummary(); save(); }); });
+["fuel","conso","socNow","socTarget","bat","dcmax","acmax","plugs"].forEach(id=>{ $(id).addEventListener("input", updSummary); $(id).addEventListener("change", ()=>{ updSummary(); save(); }); });
 function fillFuels(keys, keep){
   const prev = keep || $("fuel").value;
   $("fuel").innerHTML = keys.map(k=>`<option value="${k}">${FUELS[k]}</option>`).join("");
@@ -246,7 +259,7 @@ function normPlate(t){
 const plateHTML = (p, big) => p ? `<span class="plate${big?" big":""}"><i>F</i><span>${esc(p)}</span></span>` : "";
 function snap(){
   return {carKey:carKey(car), carq:$("carq").value, fuel:$("fuel").value, conso:$("conso").value, qty:$("qty").value, tank:$("tank").value,
-          liters:$("liters").value, soc:$("socNow").value, tgt:$("socTarget").value, bat:$("bat").value, dc:$("dcmax").value, ac:$("acmax").value};
+          liters:$("liters").value, soc:$("socNow").value, tgt:$("socTarget").value, bat:$("bat").value, dc:$("dcmax").value, ac:$("acmax").value, plugs:$("plugs").value};
 }
 function writeGarage(){ try{ localStorage.setItem(GKEY, JSON.stringify(garage)); }catch(e){} }
 function saveVehicle(){
@@ -262,11 +275,11 @@ function applySnap(sn){
     const found = sn.carKey ? ENTRIES.find(e=>carKey(e)===sn.carKey) : null;
     if(found) selectCar(found, false); else fillFuels(Object.keys(FUELS));
     if(sn.fuel) fillFuels([...$("fuel").options].map(o=>o.value), sn.fuel);
-    [["conso","conso"],["qty","qty"],["tank","tank"],["liters","liters"],["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"]]
+    [["conso","conso"],["qty","qty"],["tank","tank"],["liters","liters"],["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"],["plugs","plugs"]]
       .forEach(([k,id])=>{ if(sn[k]!=null && sn[k]!=="") $(id).value = sn[k]; });
     if(![...$("qty").options].some(o=>o.value===$("qty").value)) $("qty").value="R";
     if(!car && !(+$("conso").value>0)) noCarDefaults();
-    updQ(); updSoc(); updSummary();
+    updQ(); updSoc(); syncPlugs(); updSummary();
   } finally { RESTORING = was; }
 }
 function renderGarage(){
@@ -337,7 +350,7 @@ window.ESSENCE_PLATE = () => activeVeh()?.plate || "";
 let RESTORING = true;
 function save(){ if(!RESTORING){ try{ localStorage.setItem("essence_prefs_at", String(Date.now())); }catch(e){} saveVehicle(); }
   store.set("prefs2",{v:2,carKey:carKey(car),addr:$("addr").value.startsWith("📍")?"":$("addr").value.trim(),carq:$("carq").value,fuel:$("fuel").value,conso:$("conso").value,
-  qty:$("qty").value,tank:$("tank").value,soc:$("socNow").value,tgt:$("socTarget").value,bat:$("bat").value,dc:$("dcmax").value,ac:$("acmax").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
+  qty:$("qty").value,tank:$("tank").value,soc:$("socNow").value,tgt:$("socTarget").value,bat:$("bat").value,dc:$("dcmax").value,ac:$("acmax").value,plugs:$("plugs").value,liters:$("liters").value,radius:$("radius").value,rt:$("roundtrip").checked,nt:$("notoll").checked}); }
 const p = store.get("prefs2");
 const FIRST_VISIT = !p;
 fillFuels(Object.keys(FUELS));
@@ -350,7 +363,7 @@ if(p){
   if(p.addr) $("addr").value = p.addr;
   if(p.fuel) fillFuels([...$("fuel").options].map(o=>o.value), p.fuel);
   if(p.conso) $("conso").value=p.conso;
-  [["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"]].forEach(([k,id])=>{ if(p[k]!=null&&p[k]!=="") $(id).value=p[k]; });
+  [["soc","socNow"],["tgt","socTarget"],["bat","bat"],["dc","dcmax"],["ac","acmax"],["plugs","plugs"]].forEach(([k,id])=>{ if(p[k]!=null&&p[k]!=="") $(id).value=p[k]; });
   ["qty","tank","liters"].forEach(k=>{ if(p[k]) $(k).value=p[k]; });
   $("roundtrip").checked = p.rt!==false;
   $("notoll").checked = !!p.nt;
@@ -372,7 +385,7 @@ $("forget").addEventListener("click", ()=>{
 });
 if(!car && !(+$("conso").value>0)){ if(!p) $("fuel").value="e10"; noCarDefaults(); }
 initGarage();
-updQ(); updSoc(); updSummary();
+updQ(); updSoc(); syncPlugs(); updSummary();
 $("carBox").classList.toggle("closed", !!p && +$("conso").value>0);
 RESTORING = false;
 
@@ -572,11 +585,15 @@ async function tollKm(o, s){
 }
 
 // ---------- calcul ----------
-async function search(){
+async function search(opts){
+  const auto = !!(opts && opts.auto);
   const fuel=$("fuel").value, conso=+$("conso").value, liters=litersToBuy(), radius=+$("radius").value, rt=$("roundtrip").checked, noToll=$("notoll").checked;
   if(!(conso>0)) return setStatus("Tapez votre voiture (ou indiquez sa consommation).", true);
   if(!(liters>0) && !isEV()) return setStatus("Indiquez combien de litres vous voulez mettre.", true);
-  save(); $("carHits").innerHTML=""; render.done=false; if(typeof setView==="function" && VIEW!=="list") setView("list"); $("carBox").classList.add("closed"); updSummary();
+  save();
+  if(auto){ render.done = true; }   // recalcul automatique : on ne touche ni au bandeau, ni à la vue, ni au défilement
+  else { $("carHits").innerHTML=""; render.done=false; if(typeof setView==="function" && VIEW!=="list") setView("list"); $("carBox").classList.add("closed"); }
+  updSummary();
   try{
     if(!origin){
       const q=$("addr").value.trim();
@@ -707,10 +724,21 @@ function applyFocus(){
   setTimeout(()=>{ try{ m.openPopup(); }catch(e){} }, 300);
   FOCUS = null;
 }
-$("best").addEventListener("click", ev=>{ if(ev.target.closest("[data-bestmap]") && LAST) focusStation(0); });
+$("best").addEventListener("click", ev=>{
+  if(ev.target.closest("[data-bestmap]") && LAST) focusStation(0);
+  if(ev.target.closest("[data-retry-near]") && LAST){ $("bestNear").innerHTML = "Recherche…"; loadNearby(LAST[0], $("bestNear")); }
+});
 // fiche d'une station sur la carte : bouton Google Maps
 $("map").addEventListener("click", ev=>{ const b = ev.target.closest("[data-gmap]"); if(b && LAST) openGmap(LAST[+b.dataset.gmap]); });
 $("rows").addEventListener("click", ev=>{ const b = ev.target.closest("button[data-map]"); if(b){ ev.stopPropagation(); focusStation(+b.dataset.map); } });
+let autoT = null;
+function autoSearch(){
+  if(!LAST || $("go").classList.contains("busy")) return;
+  clearTimeout(autoT);
+  autoT = setTimeout(()=>search({auto:true}), 450);
+}
+["radius","roundtrip","notoll","socNow","socTarget","fuel","conso","qty","tank","liters","bat","dcmax","acmax","plugs"]
+  .forEach(id=>$(id).addEventListener("change", autoSearch));
 let leafletP = null;
 function loadLeaflet(){
   if(window.L) return Promise.resolve();
@@ -764,7 +792,7 @@ function popupHTML(s,i){
   const name = ev ? evName(s) : sName(s);
   const addr = ev ? (s.a||"") : `${s.adresse||""}, ${s.ville||""}`;
   const chips = ev
-    ? `<span class="pc">${fmtMin(s.ch.min)} de charge</span><span>${fmt(s.p,0)} kW</span><span>${fmt(s.km,1)} km</span>${s.cost!=null?`<span>≈ ${fmt(s.cost)} €</span>`:""}`
+    ? plugTags(s) + `<span class="pc">${fmtMin(s.ch.min)} de charge</span><span>${fmt(s.p,0)} kW</span><span>${fmt(s.km,1)} km</span>${s.cost!=null?`<span>≈ ${fmt(s.cost)} €</span>`:""}`
     : `<span class="pc">${fmt(s.price,3)} €/L</span><span>${fmt(s.km,1)} km</span><span>total ${fmt(s.total)} €</span>`;
   return `<div class="pop"><div class="pt"><span class="rk${i?"":" top"}">${i?i+1:"★"}</span><b>${esc(name)}</b></div>
     <div class="pa">${esc(addr)}</div><div class="pchips">${chips}</div>
@@ -815,18 +843,44 @@ async function loadIrve(o, radius){
   return lists.flat();
 }
 const PLUGS = {"2":"Type 2","C":"Combo CCS","D":"CHAdeMO","E":"Prise domestique"};
-function priceKwh(t){
+const PLUG_FAST = {C:1, D:1};
+// une étiquette par type de prise ; « ok » = compatible avec la voiture choisie
+function plugTags(s){
+  const dc = +$("dcmax").value||0;
+  return (s.k||"").split("").filter(k=>PLUGS[k]).map(k=>{
+    const ok = carPlugs().has(k) && (!PLUG_FAST[k] || dc>0);
+    return `<span class="plug${PLUG_FAST[k]?" fast":""}${ok?"":" no"}" title="${ok?"Compatible avec votre voiture":"Non compatible avec votre voiture"}">${PLUG_FAST[k]?"⚡ ":""}${PLUGS[k]}</span>`;
+  }).join("") || `<span class="plug">Prise non précisée</span>`;
+}
+// prix déclaré par l'opérateur : { kwh: €/kWh } ou { min: €/minute } ; null si illisible
+function parseTarif(t){
   if(!t) return null;
-  const m = String(t).replace(/\s/g," ").match(/(\d+[.,]\d{1,3})\s*(?:€|eur|euros?)?\s*(?:ttc\s*)?(?:\/|par|le)\s*kwh/i);
-  if(m){ const v = parseFloat(m[1].replace(",",".")); if(v>0 && v<2) return v; }
+  const x = String(t).replace(/\s+/g," ").replace(/Ć/g,"€").replace(/ķ/g,"é");
+  const num = v => parseFloat(String(v).replace(",","."));
+  let m = x.match(/energyPrice"?\s*:\s*(\d+(?:\.\d+)?)/i);                                   // format technique (JSON)
+  if(m && num(m[1])>0 && num(m[1])<2) return {kwh:num(m[1])};
+  m = x.match(/(\d+(?:[.,]\d+)?)\s*(?:€|eur(?:os?)?)\s*(?:ttc|ht)?\s*(?:\/|par|le|du|pour)?\s*(?:1\s*)?kwh/i)     // 0,39 € / kWh
+   || x.match(/(\d+[.,]\d+)\s*(?:ttc\s*)?(?:\/|par)\s*kwh/i);                                // 0,39/kWh
+  if(m && num(m[1])>0 && num(m[1])<2) return {kwh:num(m[1])};
+  m = x.match(/(\d+(?:[.,]\d+)?)\s*(?:cts?|centimes?|c€)\s*(?:\/|par|le)?\s*kwh/i);             // 49 cts/kWh
+  if(m && num(m[1])>1 && num(m[1])<200) return {kwh:num(m[1])/100};
+  if(/^\s*\d+[.,]\d+\s*€?\s*$/.test(x) && num(x)>0.05 && num(x)<1.5) return {kwh:num(x)};        // « 0.30 » seul
+  m = x.match(/(\d+[.,]\d+)\s*€?\s*(?:ttc\s*)?(?:\/|par|la)\s*min/i);                            // 0,025 € / min
+  if(m && num(m[1])>0 && num(m[1])<1) return {min:num(m[1])};
+  if(/gratuit|^0 pour|^0[.,]?0*\s*€?$/i.test(x)) return {kwh:0};
   return null;
 }
+// prix estimé quand l'opérateur n'en publie pas (moyennes indicatives par type de borne)
+const estKwh = (s, fast) => !fast ? 0.45 : s.p >= 150 ? 0.59 : 0.55;
 function fmtMin(m){ m=Math.round(m); return m<60 ? `${m} min` : `${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`; }
 // temps de charge, avec ralentissement au-delà de 80 % en charge rapide
 function chargeMinutes(s, ctx){
   const {bat, now, tgt, dc, ac, driveKwh} = ctx;
-  const dcOk = dc>0 && s.k.includes("C") && s.p>=20;
-  const power = dcOk ? Math.min(s.p, dc) : Math.min(s.p||7, ac, s.k.includes("2")||s.k.includes("E") ? 43 : 0);
+  const cp = carPlugs();
+  const dcOk = dc>0 && s.p>=20 && ((s.k.includes("C") && cp.has("C")) || (s.k.includes("D") && cp.has("D")));
+  const t2 = s.k.includes("2") && cp.has("2"), dom = s.k.includes("E") && cp.has("E");
+  // prise domestique : environ 2,3 kW (3,7 kW au mieux)
+  const power = dcOk ? Math.min(s.p, dc) : t2 ? Math.min(s.p||7, ac, 43) : dom ? Math.min(3.7, ac) : (!s.k && cp.has("2") ? Math.min(s.p||7, ac) : 0);
   if(!(power>0)) return null;
   // énergie consommée pour aller à la borne : à recharger aussi
   const startPct = Math.max(1, now - driveKwh/bat*100);
@@ -844,7 +898,8 @@ async function searchEV(){
   let st = (await loadIrve(origin, radius)).map(s=>({...s, lat:s.la, lon:s.lo}));
   st = st.filter(s=>haversine(origin,s)<=radius);
   // compatibles avec la voiture
-  st = st.filter(s => (ctx.dc>0 && s.k.includes("C")) || s.k.includes("2") || (!s.k && s.p<=22));
+  const cp = carPlugs();
+  st = st.filter(s => [...(s.k||"")].some(k => cp.has(k) && (k!=="C" && k!=="D" || ctx.dc>0)) || (!s.k && s.p<=22 && cp.has("2")));
   if(!st.length){ progress(null); return setStatus(`Aucune borne compatible dans un rayon de ${radius} km. Essayez un rayon plus grand.`, true); }
   const sortBy = () => $("evSort").value;
   const compute = () => {
@@ -854,9 +909,12 @@ async function searchEV(){
       s.ch = c;
       s.driveMin = s.min*(rt?2:1);
       s.totalMin = c ? c.min + s.driveMin : Infinity;
-      const pk = s.g ? 0 : priceKwh(s.t);
-      s.pk = pk;
-      s.cost = c && pk!=null ? pk*c.kwh : null;
+      const tf = s.g ? {kwh:0} : parseTarif(s.t);
+      s.est = false;
+      if(tf && tf.kwh!=null){ s.pk = tf.kwh; s.cost = c ? tf.kwh*c.kwh : null; }
+      else if(tf && tf.min!=null && c){ s.pk = null; s.cost = tf.min*c.min; s.permin = tf.min; }
+      else if(c){ s.pk = estKwh(s, c.fast); s.cost = s.pk*c.kwh; s.est = true; }
+      else { s.pk = null; s.cost = null; }
       s.tollCost = noToll ? 0 : (s.tollKm||0)*TOLL_EUR_KM*(rt?2:1);
     });
     st = st.filter(s=>s.ch);
@@ -905,7 +963,11 @@ function renderEV(st, ctx, rt){
   const best = st[0];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   const plugs = s => s.k.split("").map(k=>PLUGS[k]).filter(Boolean).join(" · ");
-  const costTxt = s => s.g ? "Gratuit" : s.cost!=null ? `≈ ${fmt(s.cost)} € (${fmt(s.pk,2)} €/kWh)` : "Prix non communiqué";
+  const costTxt = s => s.g || s.cost===0 ? "Gratuit"
+    : s.cost==null ? "Prix non communiqué"
+    : s.permin ? `≈ ${fmt(s.cost)} € (${fmt(s.permin,3)} €/min)`
+    : s.est ? `≈ ${fmt(s.cost)} € estimé (~${fmt(s.pk,2)} €/kWh)`
+    : `≈ ${fmt(s.cost)} € (${fmt(s.pk,2)} €/kWh)`;
   $("best").style.display="block";
   $("best").innerHTML = `
     <div class="kicker">${{cost:"La moins chère",best:"Le meilleur rapport durée / prix",time:"La plus rapide"}[$("evSort").value]}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
@@ -913,6 +975,7 @@ function renderEV(st, ctx, rt){
     <div class="big" style="margin-top:6px">${fmtMin(best.ch.min)} <span style="font-size:.5em">de charge (${ctx.now} → ${ctx.tgt} %)</span></div>
     <div>${fmt(best.ch.power,0)} kW ${best.ch.fast?"charge rapide":"prise normale"} · ${fmt(best.km,1)} km · ~${Math.round(best.min)} min de route${best.tollCost>0?` · péage ~${fmt(best.tollCost)} €`:""}</div>
     <div>${costTxt(best)}${best.h?` · ${esc(best.h)}`:""}</div>
+    <div class="plugs"><span class="pl">Prises :</span>${plugTags(best)} <span class="pl">· ${best.q} point${best.q>1?"s":""} de charge</span></div>
     <div style="margin:10px 0 6px"><b>☕ Pendant la charge, à côté :</b></div>
     <div class="near" id="bestNear"><span class="muted" style="color:inherit;opacity:.85">Recherche…</span></div>
     <div class="bestbtns" style="margin-top:12px"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" data-bestmap="1">${ICON.pin}Voir sur la carte</button></div>`;
@@ -923,12 +986,15 @@ function renderEV(st, ctx, rt){
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
     <td data-l="Rang">${avatar(evName(s))}<span class="rk">${i+1}</span></td>
     <td data-l="Station"><a href="${nav(s)}" target="_blank" rel="noopener"><b>${esc(evName(s))}</b></a><br>${esc(evPlace(s))}${esc(s.a)}
-      <div class="meta"><span>${fmt(s.p,0)} kW</span><span>${esc(plugs(s))}</span><span>${fmt(s.km,1)} km</span><span>${s.q} point${s.q>1?"s":""} de charge</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}<span>${esc(costTxt(s))}</span></div>
+      <div class="meta"><span>${fmt(s.p,0)} kW</span>${plugTags(s)}<span>${fmt(s.km,1)} km</span><span>${s.q} point${s.q>1?"s":""} de charge</span>${s.tollCost>0?`<span class="toll">péage ~${fmt(s.tollCost)} €</span>`:""}<span>${esc(costTxt(s))}</span></div>
       <button type="button" class="nearbtn" data-i="${i}">☕ Que faire à côté ?</button><div class="near"></div></td>
     <td class="n" data-l="Coût total"><b>${fmtMin(s.ch.min)}</b></td>
     <td class="n" data-l="Écart">${s.cost!=null?fmt(s.cost,0)+" €":(s.g?"0 €":"? €")}</td>
     <td class="ract"><div class="racts"><button type="button" data-map="${i}">${ICON.pin}Voir sur la carte</button><a href="${nav(s)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div></td></tr>`).join("");
-  $("rows").onclick = ev => { const b=ev.target.closest(".nearbtn"); if(!b) return; b.disabled=true; loadNearby(st[+b.dataset.i], b.nextElementSibling).then(()=>b.remove()); };
+  $("rows").onclick = ev => { const b=ev.target.closest(".nearbtn"); if(!b) return;
+    const box = b.parentElement.querySelector(".near"); b.disabled = true; b.textContent = "Recherche des lieux à côté…";
+    loadNearby(st[+b.dataset.i], box).then(()=>b.remove()); };
+  loadNearby(best, $("bestNear"));
   st.forEach((s,i)=>{ s.popup = `<b>${i+1}. ${esc(evName(s))}</b><br>${esc(s.a)}<br>${fmt(s.p,0)} kW – charge ${fmtMin(s.ch.min)}`; });
   showResults(st);
   if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
@@ -946,18 +1012,18 @@ const NEAR_CATS = [
   [t=>t.amenity==="library","📚","Bibliothèque"],[t=>t.amenity==="toilets","🚻","Toilettes"]
 ];
 const nearCache = {};
-async function loadNearby(s, box){
-  if(!s || !box) return;
+function fetchNearby(s){
   const key = s.lat.toFixed(4)+","+s.lon.toFixed(4);
-  try{
-    if(!nearCache[key]){
-      const q = `[out:json][timeout:15];(nwr["amenity"~"^(cafe|restaurant|fast_food|bar|pub|cinema|library|toilets)$"](around:500,${s.lat},${s.lon});nwr["shop"](around:500,${s.lat},${s.lon});nwr["leisure"~"^(park|garden)$"](around:500,${s.lat},${s.lon});nwr["tourism"~"^(museum|attraction|viewpoint)$"](around:500,${s.lat},${s.lon}););out center tags 80;`;
+  if(!nearCache[key]) nearCache[key] = (async () => {
+      const q = `[out:json][timeout:10];(nwr["amenity"~"^(cafe|restaurant|fast_food|bar|pub|cinema|library|toilets)$"](around:500,${s.lat},${s.lon});nwr["shop"](around:500,${s.lat},${s.lon});nwr["leisure"~"^(park|garden)$"](around:500,${s.lat},${s.lon});nwr["tourism"~"^(museum|attraction|viewpoint)$"](around:500,${s.lat},${s.lon}););out center tags 80;`;
+      const ctrls = OVERPASS.map(()=>new AbortController());
+      const tm = setTimeout(()=>ctrls.forEach(c=>c.abort()), 12000);
       let data = null;
-      for(const url of OVERPASS){
-        const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 8000);
-        try{ const r = await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrl.signal}); if(r.ok){ data = await r.json(); break; } }catch(e){} finally{ clearTimeout(t); }
-      }
-      if(!data) throw new Error();
+      try{
+        data = await Promise.any(OVERPASS.map((url,i)=>fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),signal:ctrls[i].signal})
+          .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })));
+      }catch(e){} finally{ clearTimeout(tm); ctrls.forEach(c=>{ try{ c.abort(); }catch(e){} }); }
+      if(!data){ delete nearCache[key]; throw new Error(); }
       const items = [];
       (data.elements||[]).forEach(e=>{
         const t = e.tags||{}, lat = e.lat??e.center?.lat, lon = e.lon??e.center?.lon;
@@ -967,16 +1033,21 @@ async function loadNearby(s, box){
         items.push({ic:cat[1], kind:cat[2], name, d:haversine(s,{lat,lon})*1000});
       });
       items.sort((a,b)=>a.d-b.d);
-      // variété : au plus 2 par catégorie
-      const per = {}, out = [];
+      const per = {}, out = [];   // variété : au plus 2 par catégorie
       for(const it of items){ per[it.kind]=(per[it.kind]||0)+1; if(per[it.kind]<=2) out.push(it); if(out.length>=8) break; }
-      nearCache[key] = out;
-    }
-    const list = nearCache[key];
+      return out;
+  })();
+  return nearCache[key];
+}
+async function loadNearby(s, box){
+  if(!s || !box) return;
+  try{
+    const list = await fetchNearby(s);
+    if(!box.isConnected) return;   // le bloc a été redessiné entre-temps : l'appel suivant s'en charge
     box.innerHTML = list.length
       ? `<ul>${list.map(it=>`<li><span>${it.ic} ${esc(it.name||it.kind)}${it.name?` <span class="muted" style="color:inherit;opacity:.7">· ${it.kind}</span>`:""}</span><span>${Math.round(it.d)} m · ${Math.max(1,Math.round(it.d/80))} min à pied</span></li>`).join("")}</ul>`
       : `<span class="muted" style="color:inherit;opacity:.85">Rien de répertorié à moins de 500 m.</span>`;
-  }catch(e){ box.innerHTML = `<span class="muted" style="color:inherit;opacity:.85">Impossible de charger les lieux à proximité.</span>`; }
+  }catch(e){ if(box.isConnected) box.innerHTML = `<span class="muted" style="color:inherit;opacity:.85">Impossible de charger les lieux à proximité. <button type="button" class="linkish" data-retry-near>Réessayer</button></span>`; }
 }
 
 }
