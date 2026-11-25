@@ -164,6 +164,13 @@ function updHeader(){
   $("hSub").textContent = log ? "Suivi de votre consommation" : (isEV() ? "La borne la plus avantageuse" : "Le moins cher, trajet compris");
 }
 window.ESSENCE_HEADER = updHeader;
+// les défilements automatiques (résultat, formulaire…) s'arrêtent sous l'en-tête fixe
+{
+  const hd = document.querySelector("header");
+  const pad = () => { document.documentElement.style.scrollPaddingTop = (hd.offsetHeight + 12) + "px"; };
+  pad(); addEventListener("resize", pad);
+  try{ new ResizeObserver(pad).observe(hd); }catch(e){}
+}
 addEventListener("scroll", () => document.querySelector("header").classList.toggle("shadow", scrollY > 4), {passive:true});
 function updSummary(){
   const pl = "";
