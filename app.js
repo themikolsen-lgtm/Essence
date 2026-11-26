@@ -697,6 +697,14 @@ async function search(opts){
 }
 
 const sName = s => s.brand ? "Station "+s.brand : "Station "+(s.ville||"");
+// défile jusqu'au meilleur résultat une fois la page en place (boutons Liste/Carte compris)
+function scrollToBest(){
+  const go = smooth => { try{ $("best").scrollIntoView({behavior: smooth?"smooth":"auto", block:"start"}); }catch(e){} };
+  const want = () => document.querySelector("header").getBoundingClientRect().bottom + 12;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>go(true), 30)));
+  // recale si la page a bougé entre-temps (barre de chargement masquée, etc.)
+  [700, 1400].forEach(t => setTimeout(()=>{ const top = $("best").getBoundingClientRect().top; if(Math.abs(top - want()) > 14 && Math.abs(top - want()) < 400) go(true); }, t));
+}
 function render(st, o){
   const best = st[0], nearest = st.reduce((a,b)=>a.km<b.km?a:b), worst = st[st.length-1];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
@@ -730,7 +738,7 @@ function render(st, o){
     <td class="n" data-l="Écart">${i?"+"+fmt(s.total-best.total)+" €":"—"}</td>
     <td class="ract"><div class="racts"><button type="button" data-map="${i}">${ICON.pin}Voir sur la carte</button><a href="${nav(s)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a></div></td></tr>`).join("");
   showResults(st);
-  if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
+  if(!render.done) scrollToBest();
   render.done = true;
 }
 // ---------- affichage des résultats : Liste ou Carte ----------
@@ -1052,7 +1060,7 @@ function renderEV(st, ctx, rt){
   loadNearby(best, $("bestNear"));
   st.forEach((s,i)=>{ s.popup = `<b>${i+1}. ${esc(evName(s))}</b><br>${esc(s.a)}<br>${fmt(s.p,0)} kW – charge ${fmtMin(s.ch.min)}`; });
   showResults(st);
-  if(!render.done){ try{ $("best").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }
+  if(!render.done) scrollToBest();
   render.done = true;
 }
 // ---------- que faire à côté pendant la charge ----------
