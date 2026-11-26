@@ -713,7 +713,7 @@ function render(st, o){
     </div>
     ${best===nearest ? `<div class="save">✓ C'est aussi la plus proche</div>` : `<div class="save">− ${fmt(saving)} € vs la plus proche</div>`}
     <p class="note">${best===nearest?"":`La plus proche : ${esc(sName(nearest))}, ${esc(nearest.ville)} à ${fmt(nearest.price,3)} €/L. `}Jusqu'à ${fmt(worst.total-best.total)} € d'écart avec la pire option.</p>
-    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" id="logBest">${ICON.plus}Noter ce plein</button><button type="button" class="logit" data-bestmap="1">${ICON.pin}Voir sur la carte</button></div>`;
+    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" id="logBest" aria-label="Noter ce plein">${ICON.plus}Noter</button><button type="button" class="logit" data-bestmap="1" aria-label="Voir sur la carte">${ICON.pin}Carte</button></div>`;
   window.ESSENCE_LAST = {station:`${sName(best)}, ${best.ville||""}`, price:best.price, liters:o.liters, fuel:FUELS[o.fuel]};
   $("logBest").onclick = () => window.CARNET?.prefill(window.ESSENCE_LAST);
   $("resultsPanel").style.display="block";
@@ -1031,7 +1031,7 @@ function renderEV(st, ctx, rt){
     <div class="plugs"><span class="pl">Prises :</span>${plugTags(best)} <span class="pl">· ${best.q} point${best.q>1?"s":""} de charge</span></div>
     <div style="margin:10px 0 6px"><b>☕ Pendant la charge, à côté :</b></div>
     <div class="near" id="bestNear"><span class="muted" style="color:inherit;opacity:.85">Recherche…</span></div>
-    <div class="bestbtns" style="margin-top:12px"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" data-bestmap="1">${ICON.pin}Voir sur la carte</button></div>`;
+    <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" data-bestmap="1" aria-label="Voir sur la carte">${ICON.pin}Carte</button></div>`;
   $("resultsPanel").style.display="block";
   $("resTitle").textContent = "Toutes les bornes";
   $("evSort").nextElementSibling.style.display = "";
