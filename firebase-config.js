@@ -6,5 +6,5 @@ window.FIREBASE_CONFIG = {
   projectId: "oflp-fd4b6",
   storageBucket: "oflp-fd4b6.firebasestorage.app",
   messagingSenderId: "373286868207",
-  appId: "1:373286868207:web:22664f5452c9e6af39f71a"
+  appId: "1:373286868207:web:eeb42502e0e927f639f71a"
 };
