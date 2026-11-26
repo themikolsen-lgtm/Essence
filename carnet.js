@@ -54,6 +54,7 @@ function stats(){
     const first = fulls[0], last = fulls[fulls.length-1];
     const l = byKm.filter(e=>e.km>first.km && e.km<=last.km).reduce((s,e)=>s+e.l,0);
     if(last.km > first.km) avg = l/(last.km-first.km)*100;
+    if(avg!=null && !(avg>1 && avg<40)) avg = null;   // compteurs incohérents
   }
   if(avg==null && series.length) avg = series.reduce((a,b)=>a+b.v,0)/series.length;
   // sans deux pleins complets : estimation sur tous les pleins avec compteur (complets ou non)
@@ -80,7 +81,8 @@ function stats(){
   const perKm = kmSpan>0 ? spentInSpan/kmSpan : null;
   const kmMonth = daysKm>=20 ? kmSpan/daysKm*30.4 : null;
   const spendBase = entries.length>=2 && days>=20 ? (total - entries.find(e=>e.date===dates[0]).t)/days*365 : null;
-  return {cons, series, avg, est, total, litres, pAvg: litres ? total/litres : null, perKm, kmSpan, kmMonth,
+  const nKm = byKm.length, badKm = byKm.length>=2 && avg==null && byKm[byKm.length-1].km > byKm[0].km;
+  return {cons, series, avg, est, nKm, badKm, total, litres, pAvg: litres ? total/litres : null, perKm, kmSpan, kmMonth,
           month: sumM(cur), prevMonth: sumM(prevM), year: spendBase};
 }
 
@@ -128,7 +130,7 @@ function render(){
          ${s.est?`<p class="muted" style="margin:6px 2px 0">Calculée sans plein complet : elle s'affine à chaque plein. Cochez « Plein complet » quand c'est le cas pour plus de précision.</p>`:""}
          <button type="button" class="ghost" id="useReal">Utiliser ${fmt(s.avg,1)} L/100 km pour trouver la station</button>`
       : `<div class="ht">Consommation réelle</div><div class="hv"><b>–</b><span>L / 100 km</span></div>
-         <p class="muted" style="margin:8px 2px 0">Elle s'affiche dès <b>deux pleins avec le compteur</b> kilométrique (plus précise avec des pleins complets).</p>`;
+         <p class="muted" style="margin:8px 2px 0">${entries.length>=2 ? esc(whyNoCons(s)) : `Elle s'affiche dès <b>deux pleins avec le compteur</b> kilométrique.`}</p>`;
     const ub = $("useReal");
     if(ub) ub.onclick = () => { window.ESSENCE_SET_CONSO?.(Math.round(s.avg*10)/10); toast("Consommation réelle utilisée pour trouver la station."); };
   }
@@ -169,6 +171,13 @@ function render(){
 }
 
 // graphique : consommation (points + moyenne), prix du litre, ou dépenses par mois (barres)
+// pourquoi la consommation ne peut pas encore être calculée
+function whyNoCons(s){
+  const n = entries.length, k = s.nKm;
+  if(s.badKm) return "Les compteurs saisis donnent une consommation impossible : vérifiez les km de vos pleins.";
+  if(k===0) return n>=2 ? `Aucun de vos ${n} pleins n'a le compteur (km) : modifiez-les pour l'ajouter.` : "Ajoutez le compteur (km) à vos pleins.";
+  return `Il manque le compteur sur ${n-k} plein${n-k>1?"s":""} : ${k} seul${k>1?"s":""} sur ${n} l'${k>1?"ont":"a"}. Il en faut au moins 2.`;
+}
 function drawChart(s){
   const svg = $("cSvg"); if(!svg || $("chartCard").hidden) return;
   const W = svg.clientWidth || 340, H = svg.clientHeight || 210, m = {l:34,r:10,t:14,b:22};
@@ -184,7 +193,7 @@ function drawChart(s){
   }
   const vals = bars ? bars.map(b=>b.v) : pts.map(p=>p.v).concat(avgLine??[], ref??[]);
   if(!vals.length || (!bars && !pts.length)){
-    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">${metric==="cons"?"Il faut au moins deux pleins avec le compteur.":"Pas encore assez de données."}</text>`;
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">${metric==="cons"?(s.badKm ? "Compteurs incohérents : vérifiez les km." : "Il faut le compteur (km) sur 2 pleins."):"Pas encore assez de données."}</text>`;
     $("cLegend").textContent = ""; return;
   }
   let lo = bars ? 0 : Math.min(...vals), hi = Math.max(...vals);
