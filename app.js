@@ -701,7 +701,7 @@ function render(st, o){
   const best = st[0], nearest = st.reduce((a,b)=>a.km<b.km?a:b), worst = st[st.length-1];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   $("best").style.display="block";
-  $("best").dataset.fuel = o.fuel;
+  $("best").dataset.fuel = o.fuel; $("rows").dataset.fuel = o.fuel;
   const saving = nearest.total-best.total;
   $("best").innerHTML = `
     <div class="kicker">Le plus rentable${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
@@ -1022,7 +1022,7 @@ function renderEV(st, ctx, rt){
     : s.permin ? `≈ ${fmt(s.cost)} € (${fmt(s.permin,3)} €/min)`
     : s.est ? `≈ ${fmt(s.cost)} € estimé (~${fmt(s.pk,2)} €/kWh)`
     : `≈ ${fmt(s.cost)} € (${fmt(s.pk,2)} €/kWh)`;
-  $("best").dataset.fuel = "elec";
+  $("best").dataset.fuel = "elec"; $("rows").dataset.fuel = "elec";
   $("best").style.display="block";
   $("best").innerHTML = `
     <div class="kicker">${{cost:"La moins chère",best:"Le meilleur rapport durée / prix",time:"La plus rapide"}[$("evSort").value]}${car?` pour votre ${esc(car.brand)} ${esc(car.model)}`:""}</div>
