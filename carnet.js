@@ -56,6 +56,17 @@ function stats(){
     if(last.km > first.km) avg = l/(last.km-first.km)*100;
   }
   if(avg==null && series.length) avg = series.reduce((a,b)=>a+b.v,0)/series.length;
+  // sans deux pleins complets : estimation sur tous les pleins avec compteur (complets ou non)
+  let est = false;
+  if(avg==null && byKm.length>=2){
+    const k0 = byKm[0].km; let l = 0;
+    for(let i=1;i<byKm.length;i++){
+      l += byKm[i].l; const d = byKm[i].km - k0;
+      if(d>0){ const v = l/d*100; if(v>1 && v<40) series.push({date:byKm[i].date, v, km:d, est:true}); }
+    }
+    const d = byKm[byKm.length-1].km - k0;
+    if(d>0){ const v = l/d*100; if(v>1 && v<40){ avg = v; est = true; } }
+  }
   const total = entries.reduce((s,e)=>s+e.t,0), litres = entries.reduce((s,e)=>s+e.l,0);
   const kmSpan = byKm.length>=2 ? byKm[byKm.length-1].km - byKm[0].km : 0;
   const spentInSpan = byKm.length>=2 ? byKm.slice(1).reduce((s,e)=>s+e.t,0) : 0;
@@ -69,7 +80,7 @@ function stats(){
   const perKm = kmSpan>0 ? spentInSpan/kmSpan : null;
   const kmMonth = daysKm>=20 ? kmSpan/daysKm*30.4 : null;
   const spendBase = entries.length>=2 && days>=20 ? (total - entries.find(e=>e.date===dates[0]).t)/days*365 : null;
-  return {cons, series, avg, total, litres, pAvg: litres ? total/litres : null, perKm, kmSpan, kmMonth,
+  return {cons, series, avg, est, total, litres, pAvg: litres ? total/litres : null, perKm, kmSpan, kmMonth,
           month: sumM(cur), prevMonth: sumM(prevM), year: spendBase};
 }
 
@@ -106,17 +117,18 @@ function render(){
       badges.push(Math.abs(d)<3 ? `<span class="badge good">= conforme à la ${esc(carInfo.name)} (${fmt(carInfo.conso,1)})</span>`
         : `<span class="badge ${d>0?"bad":"good"}">${d>0?"+":"−"}${fmt(Math.abs(d),0)} % vs ${fmt(carInfo.conso,1)} annoncés</span>`);
     }
-    if(last && prev){
+    if(last && prev && !s.est){
       const d = last.v-prev.v;
       badges.push(`<span class="badge ${d>0.05?"bad":d<-0.05?"good":""}">${d>0.05?"↗":d<-0.05?"↘":"→"} dernier plein : ${fmt(last.v,1)} L</span>`);
     }
     $("cHero").innerHTML = s.avg!=null
-      ? `<div class="ht">Consommation réelle</div><div class="hv"><b>${fmt(s.avg,1)}</b><span>L / 100 km</span></div>
+      ? `<div class="ht">Consommation réelle${s.est?` <span class="estb">estimation</span>`:""}</div><div class="hv"><b>${s.est?"≈ ":""}${fmt(s.avg,1)}</b><span>L / 100 km</span></div>
          <div class="badges">${badges.join("")}</div>
          <p class="muted" style="margin:8px 2px 0">${entries.length} plein${entries.length>1?"s":""} · ${fmt(s.litres,0)} L · ${fmt(s.total)} €${s.kmSpan?` · ${s.kmSpan.toLocaleString("fr-FR")} km suivis`:""}</p>
+         ${s.est?`<p class="muted" style="margin:6px 2px 0">Calculée sans plein complet : elle s'affine à chaque plein. Cochez « Plein complet » quand c'est le cas pour plus de précision.</p>`:""}
          <button type="button" class="ghost" id="useReal">Utiliser ${fmt(s.avg,1)} L/100 km pour trouver la station</button>`
       : `<div class="ht">Consommation réelle</div><div class="hv"><b>–</b><span>L / 100 km</span></div>
-         <p class="muted" style="margin:8px 2px 0">Elle s'affiche après <b>deux pleins complets</b> avec le compteur kilométrique.</p>`;
+         <p class="muted" style="margin:8px 2px 0">Elle s'affiche dès <b>deux pleins avec le compteur</b> kilométrique (plus précise avec des pleins complets).</p>`;
     const ub = $("useReal");
     if(ub) ub.onclick = () => { window.ESSENCE_SET_CONSO?.(Math.round(s.avg*10)/10); toast("Consommation réelle utilisée pour trouver la station."); };
   }
@@ -172,11 +184,13 @@ function drawChart(s){
   }
   const vals = bars ? bars.map(b=>b.v) : pts.map(p=>p.v).concat(avgLine??[], ref??[]);
   if(!vals.length || (!bars && !pts.length)){
-    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">${metric==="cons"?"Il faut au moins deux pleins complets avec le compteur.":"Pas encore assez de données."}</text>`;
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle">${metric==="cons"?"Il faut au moins deux pleins avec le compteur.":"Pas encore assez de données."}</text>`;
     $("cLegend").textContent = ""; return;
   }
   let lo = bars ? 0 : Math.min(...vals), hi = Math.max(...vals);
   if(hi===lo){ hi += metric==="price"?0.05:1; lo = bars?0:lo-(metric==="price"?0.05:1); }
+  // écart minimal pour que les graduations restent distinctes
+  if(!bars){ const minR = metric==="price" ? 0.06 : 1; if(hi-lo < minR){ const mid = (hi+lo)/2; lo = mid-minR/2; hi = mid+minR/2; } }
   const pad = (hi-lo)*0.15; if(!bars){ lo -= pad; } hi += pad;
   const X0 = m.l, X1 = W-m.r, Y0 = H-m.b, Y1 = m.t;
   const y = v => Y0 - (v-lo)/(hi-lo)*(Y0-Y1);
@@ -202,7 +216,7 @@ function drawChart(s){
     const lastP = pts[n-1];
     g += `<text class="val" x="${Math.min(x(n-1),X1)}" y="${y(lastP.v)-10}" text-anchor="${n===1?"middle":"end"}">${fmt(lastP.v,dec)}</text>`;
     $("cLegend").textContent = metric==="cons"
-      ? `Courbe : chaque plein complet · tirets : votre moyenne (${fmt(avgLine,1)} L/100)${ref?" · points gris : consommation annoncée":""}`
+      ? `${s.est?"Estimation cumulée à chaque plein (sans plein complet)":"Courbe : chaque plein complet"} · tirets : votre moyenne (${fmt(avgLine,1)} L/100)${ref?" · points gris : consommation annoncée":""}`
       : `Prix payé à chaque plein · tirets : prix moyen (${fmt(avgLine,3)} €/L)`;
   }
   svg.innerHTML = g;
