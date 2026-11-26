@@ -441,7 +441,7 @@ function toast(msg, action, fn){
   t.innerHTML = `<span>${esc(msg)}</span>${action?`<button type="button">${esc(action)}</button>`:""}`;
   t.hidden = false;
   if(action) t.querySelector("button").onclick = () => { fn(); t.hidden = true; };
-  tTimer = setTimeout(()=>t.hidden=true, action?6000:3500);
+  tTimer = setTimeout(()=>t.hidden=true, Math.max(action?6000:3500, String(msg).length*55));
 }
 
 window.addEventListener("essence-synced", ()=>{ all = load(); refilter(); render(); });

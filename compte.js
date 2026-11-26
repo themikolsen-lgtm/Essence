@@ -49,11 +49,18 @@ async function start(){
         break;
       }
     }
-    const t = String(lastErr?.message||lastErr);
-    if(/API has not been used|not been enabled|SERVICE_DISABLED|PERMISSION_DENIED|api-not-enabled|firebasevertexai|generativelanguage/i.test(t))
-      throw new Error("Gemini n'est pas encore activé : console Firebase → AI Logic → Commencer → Gemini Developer API.");
-    if(/quota|RESOURCE_EXHAUSTED|429/i.test(t)) throw new Error("Quota gratuit de Gemini atteint pour aujourd'hui. Réessayez plus tard ou saisissez à la main.");
-    throw new Error("Lecture du ticket impossible : " + t.slice(0,140));
+    const t = String(lastErr?.message||lastErr), code = String(lastErr?.code||"");
+    console.error("Scan ticket :", lastErr);
+    let msg;
+    if(/API_KEY_SERVICE_BLOCKED|are blocked|blocked/i.test(t))
+      msg = "La clé Firebase n'autorise pas Gemini : Google Cloud → Identifiants → clé « Browser key » → Restrictions d'API → ajouter « Firebase AI Logic API » et « Gemini Developer API ».";
+    else if(/has not been used|SERVICE_DISABLED|is disabled|api-not-enabled|not been enabled/i.test(t+code))
+      msg = "Gemini n'est pas encore activé : console Firebase → AI Logic → Commencer → Gemini Developer API (l'activation peut prendre quelques minutes).";
+    else if(/quota|RESOURCE_EXHAUSTED|429/i.test(t)) msg = "Quota gratuit de Gemini atteint pour aujourd'hui. Réessayez plus tard ou saisissez à la main.";
+    else if(/App ?Check/i.test(t)) msg = "Firebase exige App Check pour AI Logic : désactivez « Appliquer » (enforcement) pour AI Logic dans App Check.";
+    else msg = "Lecture du ticket impossible.";
+    // détail technique pour diagnostic
+    throw new Error(msg + " [" + (code ? code+" · " : "") + t.replace(/https?:\/\/\S+/g,"").replace(/\s+/g," ").slice(0,160) + "]");
   };
 
   // ---------- interface ----------
