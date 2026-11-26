@@ -3,7 +3,8 @@
 const cfg = window.FIREBASE_CONFIG;
 const $ = id => document.getElementById(id);
 const K = {prefs:"essence_prefs2", prefsAt:"essence_prefs_at", carnet:"essence_carnet", del:"essence_carnet_deleted", garage:"essence_garage"};
-const SDK = "https://www.gstatic.com/firebasejs/13.4.0";
+const SDK = "https://www.gstatic.com/firebasejs/10.14.1";   // connexion + synchro (version éprouvée)
+const SDK_AI = "https://www.gstatic.com/firebasejs/13.4.0"; // Gemini (Firebase AI Logic), chargé à part
 
 if (cfg && cfg.apiKey) start().catch(e => console.error("Compte :", e));
 
@@ -21,8 +22,12 @@ async function start(){
   let aiMod = null;
   window.ESSENCE_SCAN = async (b64, mime) => {
     if(!user) throw new Error("Connectez-vous à votre compte (bouton en haut à droite) pour scanner un ticket.");
-    aiMod = aiMod || await import(`${SDK}/firebase-ai.js`);
-    const AI = aiMod, ai = AI.getAI(app, {backend: new AI.GoogleAIBackend()});
+    if(!aiMod){
+      const [A13, AIm] = await Promise.all([import(`${SDK_AI}/firebase-app.js`), import(`${SDK_AI}/firebase-ai.js`)]);
+      const aiApp = A13.getApps().find(a=>a.name==="essence-ai") || A13.initializeApp(cfg, "essence-ai");
+      aiMod = {AI: AIm, ai: AIm.getAI(aiApp, {backend: new AIm.GoogleAIBackend()})};
+    }
+    const AI = aiMod.AI, ai = aiMod.ai;
     const schema = AI.Schema.object({properties:{
       date: AI.Schema.string({description:"date du ticket au format AAAA-MM-JJ, vide si absente"}),
       litres: AI.Schema.number({description:"volume de carburant en litres, 0 si absent"}),
