@@ -223,7 +223,7 @@ $("hist").addEventListener("click", ev=>{
   if(b.dataset.edit){
     const e = all.find(x=>x.id===b.dataset.edit); if(!e) return;
     editing = e.id;
-    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
+    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; order=["lP","lL"]; calcThird(); $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
     $("logFormTitle").textContent="Modifier le plein"; $("lSave").textContent="Enregistrer les modifications"; $("lCancel").hidden=false;
     setForm(true);
   }
@@ -231,23 +231,35 @@ $("hist").addEventListener("click", ev=>{
 
 // ---------- formulaire ----------
 const num = id => { const v = parseFloat(String($(id).value).replace(",",".")); return isFinite(v) ? v : null; };
-let lastTyped = "lP";
-$("lP").addEventListener("input", ()=>{ lastTyped="lP"; const l=num("lL"), p=num("lP"); if(l&&p) $("lT").value=(l*p).toFixed(2); });
-$("lT").addEventListener("input", ()=>{ lastTyped="lT"; const l=num("lL"), t=num("lT"); if(l&&t) $("lP").value=(t/l).toFixed(3); });
-$("lL").addEventListener("input", ()=>{ const l=num("lL"), p=num("lP"), t=num("lT");
-  if(l && lastTyped==="lP" && p) $("lT").value=(l*p).toFixed(2); else if(l && t) $("lP").value=(t/l).toFixed(3); });
+// Litres, Prix/L, Total : on en remplit 2, le 3e est calculé et affiché
+let order = [];   // champs saisis, le plus récent d'abord
+const TRIO = ["lL","lP","lT"];
+function calcThird(){
+  const filled = order.filter(id=>num(id)>0).slice(0,2);
+  TRIO.forEach(id=>{ $(id).classList.remove("calc"); $(id).closest("div").classList.remove("iscalc"); });
+  if(filled.length<2) return;
+  const out = TRIO.find(id=>!filled.includes(id));
+  const l=num("lL"), p=num("lP"), t=num("lT");
+  let v = null;
+  if(out==="lT") v = (l*p).toFixed(2);
+  else if(out==="lP") v = (t/l).toFixed(3);
+  else v = (t/p).toFixed(2);
+  if(v && isFinite(v)){ $(out).value = v; $(out).classList.add("calc"); $(out).closest("div").classList.add("iscalc"); }
+}
+function markTyped(id){ order = [id, ...order.filter(x=>x!==id)]; if(!(num(id)>0)) order = order.filter(x=>x!==id).concat(id); calcThird(); }
+TRIO.forEach(id=>$(id).addEventListener("input", ()=>markTyped(id)));
 function resetForm(){
-  editing=null; $("logForm").reset(); $("lDate").value=today(); $("lFull").checked=true;
+  editing=null; $("logForm").reset(); order=[]; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
   $("logFormTitle").textContent="Ajouter un plein"; $("lSave").textContent="Enregistrer le plein"; $("lCancel").hidden=true;
 }
 $("lCancel").onclick = () => { resetForm(); setForm(!entries.length); };
 $("logForm").addEventListener("submit", ev=>{
   ev.preventDefault();
-  const l=num("lL"); let p=num("lP"), t=num("lT");
-  if(!(l>0)) return toast("Indiquez le nombre de litres.");
-  if(!(p>0) && t>0) p = t/l;
-  if(!(t>0) && p>0) t = l*p;
-  if(!(p>0)) return toast("Indiquez le prix au litre ou le total payé.");
+  let l=num("lL"), p=num("lP"), t=num("lT");
+  if([l,p,t].filter(x=>x>0).length<2) return toast("Remplissez 2 valeurs sur 3 : litres, prix/L ou total.");
+  if(!(l>0)) l = t/p;
+  if(!(p>0)) p = t/l;
+  if(!(t>0)) t = l*p;
   const km = num("lKm");
   const e = {id: editing || Date.now().toString(36)+Math.random().toString(36).slice(2,6), date:$("lDate").value||today(),
              km: km>0 ? Math.round(km) : null, l:Math.round(l*100)/100, p:Math.round(p*1000)/1000, t:Math.round(t*100)/100,
@@ -284,7 +296,7 @@ function drawPick(){
   const local = (near||[]).filter(x=>!q || match(x)).slice(0, q?20:12);
   const seen = new Set(local.map(x=>x.id));
   const far = q ? remote.filter(x=>!seen.has(x.id) && match(x)).slice(0,15) : [];
-  if(local.length){ html += `<p class="sec">${q?"Près de vous":"Les plus proches"} · ${esc(fuelName)}</p>`; list = list.concat(local); }
+  if(local.length){ html += `<p class="sec">${nearRanked ? "Votre recherche · du plus rentable" : (q?"Près de vous":"Les plus proches")} · ${esc(fuelName)}</p>`; list = list.concat(local); }
   html += local.map((x,i)=>item(x,i,q)).join("");
   if(far.length){ html += `<p class="sec">Autres résultats</p>` + far.map((x,i)=>item(x,local.length+i,q)).join(""); list = list.concat(far); }
   if(!list.length){
@@ -299,16 +311,18 @@ function item(x,i,q){
   return `<button type="button" role="option" data-i="${i}"><span>${mark(x.name,q)}</span><b>${fmt(x.price,3)} €</b>
     <small>${mark(x.ville,q)}${x.adresse?` · ${mark(x.adresse,q)}`:""}${x.km!=null?` · ${fmt(x.km,1)} km`:""}</small></button>`;
 }
+let nearRanked = false;
+addEventListener("essence-search", ()=>{ near = null; nearErr = ""; });
 async function loadNear(){
   if(near !== null || nearErr) return;
-  try{ const r = await window.ESSENCE_NEARBY(); near = r.list; fuelName = r.fuel; }
+  try{ const r = await window.ESSENCE_NEARBY(); near = r.list; fuelName = r.fuel; nearRanked = !!r.ranked; }
   catch(e){ near = []; nearErr = e.message || "Impossible de charger les stations."; }
   if(!box.hidden) drawPick();
 }
 function choose(x){
   inp.value = `${x.name}${x.ville?", "+x.ville:""}`;
-  $("lP").value = x.price; lastTyped = "lP";
-  const l = num("lL"); if(l) $("lT").value = (l*x.price).toFixed(2);
+  $("lP").value = x.price; markTyped("lP");
+  const l = num("lL");
   openPick(false);
   toast(`Prix rempli : ${fmt(x.price,3)} €/L`);
   if(!l) try{ $("lL").focus(); }catch(e){}
@@ -340,7 +354,7 @@ window.addEventListener("essence-vehicle", ()=>{ near = null; nearErr = ""; remo
 window.CARNET = {
   prefill(x){
     showTab(true); resetForm(); setForm(true);
-    if(x){ if(x.liters) $("lL").value=x.liters; if(x.price){ $("lP").value=x.price; lastTyped="lP"; if(x.liters) $("lT").value=(x.liters*x.price).toFixed(2); } if(x.station) $("lSt").value=x.station; }
+    if(x){ if(x.liters){ $("lL").value=x.liters; markTyped("lL"); } if(x.price){ $("lP").value=x.price; markTyped("lP"); } if(x.station) $("lSt").value=x.station; }
     const lastKm = Math.max(0,...entries.map(e=>e.km||0));
     $("lKm").placeholder = lastKm ? `dernier : ${lastKm.toLocaleString("fr-FR")}` : "ex. 84 250";
     setTimeout(()=>{ $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"}); try{ $("lKm").focus(); }catch(e){} }, 50);

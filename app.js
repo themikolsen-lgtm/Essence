@@ -122,8 +122,11 @@ window.ESSENCE_NEARBY = async () => {
   const o = await ensureOrigin();
   if(!o) throw new Error("Position inconnue : tapez une enseigne ou une ville pour chercher une station.");
   const fuel = $("fuel").value;
-  const st = await fetchStations(o, fuel, 30);
   const brands = await BRANDS;
+  // mêmes stations, même ordre que la dernière recherche (du plus rentable au moins rentable)
+  const last = window.ESSENCE_LASTSEARCH;
+  if(last && last.fuel===fuel && last.list.length) return {fuel:FUELS[fuel], ranked:true, list: last.list.map(s=>toPick(s,brands))};
+  const st = await fetchStations(o, fuel, +$("radius").value || 15);
   return {fuel:FUELS[fuel], list: st.map(s=>toPick(s,brands)).sort((a,b)=>a.km-b.km)};
 };
 // recherche par ville / adresse dans toute la France (prix du carburant choisi)
@@ -709,6 +712,8 @@ function render(st, o){
   const best = st[0], nearest = st.reduce((a,b)=>a.km<b.km?a:b), worst = st[st.length-1];
   const nav = s=>`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
   $("best").style.display="block";
+  window.ESSENCE_LASTSEARCH = {fuel:o.fuel, list:st};
+  dispatchEvent(new Event("essence-search"));
   $("best").dataset.fuel = o.fuel; $("rows").dataset.fuel = o.fuel;
   const saving = nearest.total-best.total;
   $("best").innerHTML = `
