@@ -3,7 +3,7 @@
 const cfg = window.FIREBASE_CONFIG;
 const $ = id => document.getElementById(id);
 const K = {prefs:"essence_prefs2", prefsAt:"essence_prefs_at", carnet:"essence_carnet", del:"essence_carnet_deleted", garage:"essence_garage"};
-const SDK = "https://www.gstatic.com/firebasejs/10.14.1";
+const SDK = "https://www.gstatic.com/firebasejs/13.4.0";
 
 if (cfg && cfg.apiKey) start().catch(e => console.error("Compte :", e));
 
@@ -15,6 +15,41 @@ async function start(){
   auth.languageCode = "fr";
   const db = F.getFirestore(app);
   let user = null, applying = false, pushTimer = null;
+
+  // ---------- lecture d'un ticket de caisse par Gemini (Firebase AI Logic) ----------
+  const MODELS = ["gemini-3.1-flash-lite", "gemini-3.7-flash", "gemini-2.5-flash"];
+  let aiMod = null;
+  window.ESSENCE_SCAN = async (b64, mime) => {
+    if(!user) throw new Error("Connectez-vous à votre compte (bouton en haut à droite) pour scanner un ticket.");
+    aiMod = aiMod || await import(`${SDK}/firebase-ai.js`);
+    const AI = aiMod, ai = AI.getAI(app, {backend: new AI.GoogleAIBackend()});
+    const schema = AI.Schema.object({properties:{
+      date: AI.Schema.string({description:"date du ticket au format AAAA-MM-JJ, vide si absente"}),
+      litres: AI.Schema.number({description:"volume de carburant en litres, 0 si absent"}),
+      prix_litre: AI.Schema.number({description:"prix au litre en euros, 0 si absent"}),
+      total: AI.Schema.number({description:"montant payé pour le carburant en euros, 0 si absent"}),
+      station: AI.Schema.string({description:"enseigne et ville de la station, vide si absente"}),
+      carburant: AI.Schema.string({description:"type de carburant (Gazole, SP95, SP95-E10, SP98, E85, GPL), vide si absent"})
+    }});
+    const prompt = "Voici la photo d'un ticket de caisse de station-service en France. Lis uniquement la ligne de carburant : date, litres (ou « Qté »/« Volume »), prix unitaire au litre, montant total TTC du carburant, enseigne + ville de la station et type de carburant. Les virgules sont des séparateurs décimaux. N'invente rien : mets 0 ou une chaîne vide si une information n'est pas lisible.";
+    let lastErr = null;
+    for(const m of MODELS){
+      try{
+        const model = AI.getGenerativeModel(ai, {model:m, generationConfig:{responseMimeType:"application/json", responseSchema:schema, temperature:0}});
+        const r = await model.generateContent([prompt, {inlineData:{data:b64, mimeType:mime}}]);
+        return JSON.parse(r.response.text());
+      }catch(e){
+        lastErr = e; const t = String(e?.message||e);
+        if(/not found|404|is not supported|unsupported model/i.test(t)) continue;   // modèle indisponible : essayer le suivant
+        break;
+      }
+    }
+    const t = String(lastErr?.message||lastErr);
+    if(/API has not been used|not been enabled|SERVICE_DISABLED|PERMISSION_DENIED|api-not-enabled|firebasevertexai|generativelanguage/i.test(t))
+      throw new Error("Gemini n'est pas encore activé : console Firebase → AI Logic → Commencer → Gemini Developer API.");
+    if(/quota|RESOURCE_EXHAUSTED|429/i.test(t)) throw new Error("Quota gratuit de Gemini atteint pour aujourd'hui. Réessayez plus tard ou saisissez à la main.");
+    throw new Error("Lecture du ticket impossible : " + t.slice(0,140));
+  };
 
   // ---------- interface ----------
   const btn = $("acctBtn"), dlg = $("acct");

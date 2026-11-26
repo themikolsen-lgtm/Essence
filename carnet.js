@@ -260,6 +260,36 @@ TRIO.forEach(id=>{
   });
 });
 paintAuto();
+// ---- Scanner un ticket (Gemini via le compte Firebase) ----
+function shrink(file){ return new Promise((ok,ko)=>{
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => { const k = Math.min(1, 1600/Math.max(img.width,img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+    ok(c.toDataURL("image/jpeg",0.82).split(",")[1]); };
+  img.onerror = () => { URL.revokeObjectURL(url); ko(new Error("Image illisible.")); };
+  img.src = url; }); }
+$("scanIn").addEventListener("change", async ()=>{
+  const f = $("scanIn").files?.[0]; $("scanIn").value = ""; if(!f) return;
+  if(!window.ESSENCE_SCAN) return toast("Connectez-vous à votre compte (bouton en haut à droite) pour scanner un ticket.");
+  const b = $("scanBtn"); b.classList.add("busy"); $("scanTxt").textContent = "Lecture du ticket…";
+  try{
+    const r = await window.ESSENCE_SCAN(await shrink(f), "image/jpeg");
+    const L = +r.litres||0, P = +r.prix_litre||0, T = +r.total||0;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(r.date||"")) $("lDate").value = r.date;
+    if(r.station) $("lSt").value = r.station;
+    TRIO.forEach(id=>$(id).value="");
+    // le champ manquant (ou le total si tout est lu) passe en « auto »
+    if(L>0 && P>0){ autoId = "lT"; $("lL").value = L; $("lP").value = P; }
+    else if(L>0 && T>0){ autoId = "lP"; $("lL").value = L; $("lT").value = T; }
+    else if(P>0 && T>0){ autoId = "lL"; $("lP").value = P; $("lT").value = T; }
+    else { autoId = "lT"; if(L) $("lL").value = L; if(P) $("lP").value = P; }
+    calcThird();
+    const n = [L,P,T].filter(x=>x>0).length;
+    toast(n>=2 ? "Ticket lu ✓ Vérifiez avant d'enregistrer." : "Ticket mal lu : complétez les champs.");
+  }catch(e){ toast(e.message || "Lecture du ticket impossible."); }
+  finally{ b.classList.remove("busy"); $("scanTxt").textContent = "Scanner le ticket"; }
+});
 function resetForm(){
   editing=null; $("logForm").reset(); autoId="lT"; lastTyped=null; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
   $("logFormTitle").textContent="Ajouter un plein"; $("lSave").textContent="Enregistrer le plein"; $("lCancel").hidden=true;
