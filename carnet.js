@@ -223,7 +223,7 @@ $("hist").addEventListener("click", ev=>{
   if(b.dataset.edit){
     const e = all.find(x=>x.id===b.dataset.edit); if(!e) return;
     editing = e.id;
-    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; order=["lP","lL"]; calcThird(); $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
+    $("lDate").value=e.date; $("lKm").value=e.km||""; $("lL").value=e.l; $("lP").value=e.p; $("lT").value=e.t; autoId="lT"; lastTyped="lP"; paintAuto(); $("lSt").value=e.st||""; $("lFull").checked=!!e.full;
     $("logFormTitle").textContent="Modifier le plein"; $("lSave").textContent="Enregistrer les modifications"; $("lCancel").hidden=false;
     setForm(true);
   }
@@ -231,26 +231,37 @@ $("hist").addEventListener("click", ev=>{
 
 // ---------- formulaire ----------
 const num = id => { const v = parseFloat(String($(id).value).replace(",",".")); return isFinite(v) ? v : null; };
-// Litres, Prix/L, Total : on en remplit 2, le 3e est calculé et affiché
-let order = [];   // champs saisis, le plus récent d'abord
+// Litres, Prix/L, Total : 2 se remplissent, le 3e (« auto », orange) est calculé et bloqué.
+// Par défaut c'est le Total ; toucher le champ « auto » le libère et passe un autre champ en « auto ».
 const TRIO = ["lL","lP","lT"];
-let calcId = null;
-function calcThird(){
-  const filled = order.filter(id=>num(id)>0).slice(0,2);
-  TRIO.forEach(id=>{ $(id).classList.remove("calc"); $(id).readOnly = false; $(id).tabIndex = 0; $(id).closest("div").classList.remove("iscalc"); });
-  if(filled.length<2){ if(calcId && !order.includes(calcId)) $(calcId).value = ""; calcId = null; return; }
-  const out = TRIO.find(id=>!filled.includes(id));
-  const l=num("lL"), p=num("lP"), t=num("lT");
-  let v = null;
-  if(out==="lT") v = (l*p).toFixed(2);
-  else if(out==="lP") v = (t/l).toFixed(3);
-  else v = (t/p).toFixed(2);
-  if(v && isFinite(v)){ $(out).value = v; $(out).classList.add("calc"); $(out).readOnly = true; $(out).tabIndex = -1; $(out).closest("div").classList.add("iscalc"); calcId = out; order = order.filter(x=>x!==out); }
+let autoId = "lT", lastTyped = null;
+function paintAuto(){
+  TRIO.forEach(id=>{ const on = id===autoId; $(id).classList.toggle("calc", on); $(id).readOnly = on; $(id).closest("div").classList.toggle("iscalc", on); });
 }
-function markTyped(id){ order = [id, ...order.filter(x=>x!==id)]; if(!(num(id)>0)) order = order.filter(x=>x!==id).concat(id); calcThird(); }
-TRIO.forEach(id=>$(id).addEventListener("input", ()=>markTyped(id)));
+function calcThird(){
+  const l=num("lL"), p=num("lP"), t=num("lT");
+  let v = "";
+  if(autoId==="lT" && l>0 && p>0) v = (l*p).toFixed(2);
+  else if(autoId==="lP" && l>0 && t>0) v = (t/l).toFixed(3);
+  else if(autoId==="lL" && p>0 && t>0) v = (t/p).toFixed(2);
+  $(autoId).value = v && isFinite(v) ? v : "";
+  paintAuto();
+}
+function setAuto(id){ if(id===autoId) return; autoId = id; calcThird(); }
+function markTyped(id){ if(id===autoId) return; lastTyped = id; calcThird(); }
+TRIO.forEach(id=>{
+  $(id).addEventListener("input", ()=>markTyped(id));
+  // toucher le champ « auto » : il devient libre, l'autre champ le moins récent passe en « auto »
+  $(id).addEventListener("pointerdown", ev=>{
+    if(id!==autoId) return;
+    ev.preventDefault();
+    autoId = id==="lT" ? "lP" : "lT"; lastTyped = id; calcThird();
+    try{ $(id).focus(); $(id).select(); }catch(e){}
+  });
+});
+paintAuto();
 function resetForm(){
-  editing=null; $("logForm").reset(); order=[]; calcId=null; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
+  editing=null; $("logForm").reset(); autoId="lT"; lastTyped=null; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
   $("logFormTitle").textContent="Ajouter un plein"; $("lSave").textContent="Enregistrer le plein"; $("lCancel").hidden=true;
 }
 $("lCancel").onclick = () => { resetForm(); setForm(!entries.length); };
@@ -322,6 +333,7 @@ async function loadNear(){
 }
 function choose(x){
   inp.value = `${x.name}${x.ville?", "+x.ville:""}`;
+  if(autoId==="lP") autoId="lT";
   $("lP").value = x.price; markTyped("lP");
   const l = num("lL");
   openPick(false);
@@ -355,7 +367,7 @@ window.addEventListener("essence-vehicle", ()=>{ near = null; nearErr = ""; remo
 window.CARNET = {
   prefill(x){
     showTab(true); resetForm(); setForm(true);
-    if(x){ if(x.liters){ $("lL").value=x.liters; markTyped("lL"); } if(x.price){ $("lP").value=x.price; markTyped("lP"); } if(x.station) $("lSt").value=x.station; }
+    if(x){ if(x.liters||x.price) autoId="lT"; if(x.liters){ $("lL").value=x.liters; markTyped("lL"); } if(x.price){ $("lP").value=x.price; markTyped("lP"); } if(x.station) $("lSt").value=x.station; }
     const lastKm = Math.max(0,...entries.map(e=>e.km||0));
     $("lKm").placeholder = lastKm ? `dernier : ${lastKm.toLocaleString("fr-FR")}` : "ex. 84 250";
     setTimeout(()=>{ $("logFormCard").scrollIntoView({behavior:"smooth",block:"start"}); try{ $("lKm").focus(); }catch(e){} }, 50);
