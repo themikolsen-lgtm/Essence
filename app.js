@@ -718,7 +718,7 @@ function render(st, o){
   window.ESSENCE_LAST = {station:`${sName(best)}, ${best.ville||""}`, price:best.price, liters:o.liters, fuel:FUELS[o.fuel]};
   $("logBest").onclick = () => window.CARNET?.prefill(window.ESSENCE_LAST);
   $("resultsPanel").style.display="block";
-  $("resTitle").textContent = st.length>1 ? "Ensuite" : "Aucune autre station dans le rayon";
+  $("resTitle").textContent = "Toutes les stations";
   $("evSort").nextElementSibling.style.display = "none";
   $("resNote").textContent = "Coût total = litres × prix + carburant brûlé pour le trajet + péage éventuel (≈ 0,11 €/km). Prix officiels prix-carburants.gouv.fr · enseignes OpenStreetMap · distances par la route (OSRM).";
   $("rows").onclick = null; // (boutons gérés plus bas)
@@ -1035,7 +1035,7 @@ function renderEV(st, ctx, rt){
     <div class="near" id="bestNear"><span class="muted" style="color:inherit;opacity:.85">Recherche…</span></div>
     <div class="bestbtns"><a href="${nav(best)}" target="_blank" rel="noopener">${ICON.nav}Itinéraire</a><button type="button" class="logit" data-bestmap="1" aria-label="Voir sur la carte">${ICON.pin}Carte</button></div>`;
   $("resultsPanel").style.display="block";
-  $("resTitle").textContent = st.length>1 ? "Ensuite" : "Aucune autre borne dans le rayon";
+  $("resTitle").textContent = "Toutes les bornes";
   $("evSort").nextElementSibling.style.display = "";
   $("resNote").textContent = "Temps de charge estimé selon la puissance de la borne et de votre voiture (ralentissement au-delà de 80 %), en comptant l'énergie dépensée pour y aller. Prix : tel que déclaré par l'opérateur, quand il est lisible. Bornes : base nationale IRVE (data.gouv.fr) · à côté : OpenStreetMap.";
   $("rows").innerHTML = st.map((s,i)=>`<tr class="${i?"":"top"}">
