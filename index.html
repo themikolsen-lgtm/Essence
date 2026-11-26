@@ -6,7 +6,7 @@
 <title>Essence – le plein le plus rentable</title>
 <script>
 /* mise à jour automatique : si une version plus récente est en ligne, on recharge sans le cache */
-window.APP_V="202611260920";
+window.APP_V="202611260922";
 (function(){try{
   fetch("version.txt?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.text():null}).then(function(v){
     v=(v||"").trim(); if(!v||v===window.APP_V) return;
@@ -664,6 +664,19 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
 #best .bestbtns a,#best .bestbtns .logit{min-height:40px;padding:0 8px;justify-content:center;font-size:14px;gap:6px;white-space:nowrap}
 #best .bestbtns .i{width:16px;height:16px}
 #best .near{margin-top:8px}
+/* Couleur de la carte selon le carburant (couleurs habituelles des pistolets) */
+#best[data-fuel=gazole]{--green:#f2b705;color:#1d1a12}
+#best[data-fuel=e10]{--green:#3f9b2a}
+#best[data-fuel=sp95]{--green:#12a150}
+#best[data-fuel=sp98]{--green:#0a6b3a}
+#best[data-fuel=e85]{--green:#1f6fd1}
+#best[data-fuel=gplc]{--green:#7b4bd6}
+#best[data-fuel=elec]{--green:#0a93a8}
+#best[data-fuel]{box-shadow:0 10px 24px color-mix(in srgb,var(--green) 35%,transparent)}
+#best[data-fuel=gazole] .logit{color:#1d1a12;background:rgba(0,0,0,.09)}
+#best[data-fuel=gazole] .stat{background:rgba(255,255,255,.38)}
+#best[data-fuel=gazole] .save,#best[data-fuel=gazole] a,#best[data-fuel=gazole] .av{color:#1d1a12!important}
+#best[data-fuel=gazole] .av{box-shadow:0 0 0 2px rgba(0,0,0,.15)}
 [hidden]{display:none!important}
 
 /* Repères de la carte */
@@ -828,7 +841,7 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
     <button type="button" role="radio" data-theme="light">Clair</button>
     <button type="button" role="radio" data-theme="dark">Sombre</button>
   </div>
-  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · <button type="button" id="clearCache" class="linkish">Vider le cache</button> · v202611260920</p>
+  <p class="muted saved foot">Réglages enregistrés sur cet appareil · <button type="button" id="forget" class="linkish">Effacer</button> · <button type="button" id="clearCache" class="linkish">Vider le cache</button> · v202611260922</p>
 </main>
 
 <main id="tabLog" role="tabpanel" hidden>
@@ -887,10 +900,10 @@ header.shadow{box-shadow:0 6px 16px rgba(0,0,0,.08)}
   <div id="toast" class="toast" role="status" hidden></div>
 </main>
 
-<script src="cars.js?v=202611260920"></script>
-<script src="app.js?v=202611260920"></script>
-<script src="carnet.js?v=202611260920"></script>
-<script src="firebase-config.js?v=202611260920"></script>
-<script type="module" src="compte.js?v=202611260920"></script>
+<script src="cars.js?v=202611260922"></script>
+<script src="app.js?v=202611260922"></script>
+<script src="carnet.js?v=202611260922"></script>
+<script src="firebase-config.js?v=202611260922"></script>
+<script type="module" src="compte.js?v=202611260922"></script>
 </body>
 </html>
