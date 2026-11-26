@@ -234,22 +234,23 @@ const num = id => { const v = parseFloat(String($(id).value).replace(",",".")); 
 // Litres, Prix/L, Total : on en remplit 2, le 3e est calculé et affiché
 let order = [];   // champs saisis, le plus récent d'abord
 const TRIO = ["lL","lP","lT"];
+let calcId = null;
 function calcThird(){
   const filled = order.filter(id=>num(id)>0).slice(0,2);
-  TRIO.forEach(id=>{ $(id).classList.remove("calc"); $(id).closest("div").classList.remove("iscalc"); });
-  if(filled.length<2) return;
+  TRIO.forEach(id=>{ $(id).classList.remove("calc"); $(id).readOnly = false; $(id).tabIndex = 0; $(id).closest("div").classList.remove("iscalc"); });
+  if(filled.length<2){ if(calcId && !order.includes(calcId)) $(calcId).value = ""; calcId = null; return; }
   const out = TRIO.find(id=>!filled.includes(id));
   const l=num("lL"), p=num("lP"), t=num("lT");
   let v = null;
   if(out==="lT") v = (l*p).toFixed(2);
   else if(out==="lP") v = (t/l).toFixed(3);
   else v = (t/p).toFixed(2);
-  if(v && isFinite(v)){ $(out).value = v; $(out).classList.add("calc"); $(out).closest("div").classList.add("iscalc"); }
+  if(v && isFinite(v)){ $(out).value = v; $(out).classList.add("calc"); $(out).readOnly = true; $(out).tabIndex = -1; $(out).closest("div").classList.add("iscalc"); calcId = out; order = order.filter(x=>x!==out); }
 }
 function markTyped(id){ order = [id, ...order.filter(x=>x!==id)]; if(!(num(id)>0)) order = order.filter(x=>x!==id).concat(id); calcThird(); }
 TRIO.forEach(id=>$(id).addEventListener("input", ()=>markTyped(id)));
 function resetForm(){
-  editing=null; $("logForm").reset(); order=[]; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
+  editing=null; $("logForm").reset(); order=[]; calcId=null; calcThird(); $("lDate").value=today(); $("lFull").checked=true;
   $("logFormTitle").textContent="Ajouter un plein"; $("lSave").textContent="Enregistrer le plein"; $("lCancel").hidden=true;
 }
 $("lCancel").onclick = () => { resetForm(); setForm(!entries.length); };
